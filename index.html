@@ -4,41 +4,36 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ABEL Rhythm Alphabet</title>
-  <meta name="theme-color" content="#111827" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A5%81%3C/text%3E%3C/svg%3E" />
+  <meta name="description" content="See it. Feel it. Hear it. Play it. – ABEL Rhythm Alphabet" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🥁</text></svg>" />
 
-  <!-- Tailwind CSS (play CDN) -->
+  <!-- Tailwind CSS (Play CDN) -->
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 
-  <style>
-    html, body { margin: 0; background: #111827; }
-    #root { min-height: 100vh; }
-    #loading {
-      color: #9ca3af;
-      font-family: system-ui, sans-serif;
-      padding: 2rem;
-      text-align: center;
-    }
-  </style>
-</head>
-<body>
-  <div id="root"><div id="loading">Loading ABEL Rhythm Alphabet…</div></div>
-
-  <!-- React 18 + ReactDOM (UMD builds) -->
+  <!-- React 18 (UMD builds) -->
   <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
   <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 
   <!-- Lucide icons for React (UMD build, exposes window.LucideReact) -->
   <script crossorigin src="https://cdn.jsdelivr.net/npm/lucide-react@0.383.0/dist/umd/lucide-react.min.js"></script>
 
-  <!-- Babel standalone: compiles the JSX below in the browser -->
-  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js"></script>
+  <!-- Babel: compiles the JSX below in the browser -->
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.26.4/babel.min.js"></script>
+
+  <style>
+    html, body { background: #111827; margin: 0; }
+    body { -webkit-tap-highlight-color: transparent; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
 
   <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef } = React;
 
-/* ---------- Icons: Lucide from CDN, with tiny inline fallbacks if the CDN is unavailable ---------- */
-const mkIcon = (children) => ({ size = 24, ...rest }) => (
+/* ---------- Lucide icons (with a tiny inline-SVG fallback if the CDN is unreachable) ---------- */
+const LucideLib = window.LucideReact || {};
+const makeIcon = (children) => ({ size = 24, ...rest }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
@@ -54,33 +49,33 @@ const mkIcon = (children) => ({ size = 24, ...rest }) => (
     {children}
   </svg>
 );
-const LR = window.LucideReact || {};
-const Play = LR.Play || mkIcon(<polygon points="6 3 20 12 6 21 6 3" />);
-const Pause = LR.Pause || mkIcon(<><rect x="14" y="4" width="4" height="16" rx="1" /><rect x="6" y="4" width="4" height="16" rx="1" /></>);
-const Info = LR.Info || mkIcon(<><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></>);
-const Volume2 = LR.Volume2 || mkIcon(<><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /></>);
-
-/* ---------- Storage shim: uses localStorage when window.storage is not provided ---------- */
-if (!window.storage) {
-  window.storage = {
-    async get(key) {
-      try {
-        const v = localStorage.getItem(key);
-        return v === null ? null : { key, value: v };
-      } catch (e) {
-        return null;
-      }
-    },
-    async set(key, value) {
-      try {
-        localStorage.setItem(key, value);
-        return { key, value };
-      } catch (e) {
-        return null;
-      }
-    }
-  };
-}
+const Play = LucideLib.Play || makeIcon(<polygon points="6 3 20 12 6 21 6 3" />);
+const Pause =
+  LucideLib.Pause ||
+  makeIcon(
+    <>
+      <rect x="14" y="4" width="4" height="16" rx="1" />
+      <rect x="6" y="4" width="4" height="16" rx="1" />
+    </>
+  );
+const Info =
+  LucideLib.Info ||
+  makeIcon(
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 16v-4" />
+      <path d="M12 8h.01" />
+    </>
+  );
+const Volume2 =
+  LucideLib.Volume2 ||
+  makeIcon(
+    <>
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+    </>
+  );
 
 /* =====================================================================
    DATA
@@ -197,7 +192,10 @@ const setStepState = (entry, i, state, popMs = 0) => {
   el.setAttribute('data-state', state);
   if (popMs && el.animate) {
     try {
-      el.animate((el.hasAttribute('data-n') ? POP_N : POP)[state], { duration: popMs, easing: 'ease-out' });
+      el.animate(
+        (el.hasAttribute('data-pie') ? POP_PIE : el.hasAttribute('data-n') ? POP_N : POP)[state],
+        { duration: popMs, easing: 'ease-out' }
+      );
     } catch (e) {
       /* ignore */
     }
@@ -483,9 +481,145 @@ function NotationView({ viewId, pattern, registry, size = 'md', bar = true, ghos
   );
 }
 
-// Every view goes through this switch: dots and dashes, or notation
-const PatternView = (props) =>
-  NOTATION.on ? <NotationView {...props} ghostNotes={NOTATION.ghost} /> : <DotsView {...props} />;
+/* ---------- Pie mode: each pattern is a circle, one beat = one full clockwise turn ---------- */
+// Slice 0 starts at 12 o'clock and the slices follow clockwise: a filled slice is a note, an empty one a rest.
+const PIE_CSS = `
+.abel-pie{transition:fill .12s ease-out,filter .15s ease-out,opacity .12s ease-out}
+.abel-pie-on{fill:var(--c);stroke:#111827;stroke-width:2;stroke-linejoin:round}
+.abel-pie-off{fill:rgba(255,255,255,0);stroke:var(--so);stroke-width:1.6;stroke-linejoin:round}
+.abel-pie-on[data-state="hit"]{filter:drop-shadow(0 0 6px var(--c)) brightness(1.3)}
+.abel-pie-off[data-state="rest"]{fill:rgba(229,231,235,.4);stroke:#fff}
+.abel-pie-off[data-state="ghost"]{fill:var(--c);fill-opacity:.4;stroke:#fff}
+`;
+
+// Pop animation for pie slices (a quick flash, no scaling)
+const POP_PIE = {
+  hit: [{ opacity: 0.35 }, { opacity: 1 }],
+  rest: [{ opacity: 0.5 }, { opacity: 1 }],
+  ghost: [{ opacity: 0.5 }, { opacity: 1 }]
+};
+
+const PIE_R = 44;
+
+function pieSlicePath(i, n) {
+  const a0 = (i * 2 * Math.PI) / n;
+  const a1 = ((i + 1) * 2 * Math.PI) / n;
+  const x0 = 50 + PIE_R * Math.sin(a0);
+  const y0 = 50 - PIE_R * Math.cos(a0);
+  const x1 = 50 + PIE_R * Math.sin(a1);
+  const y1 = 50 - PIE_R * Math.cos(a1);
+  const large = a1 - a0 > Math.PI ? 1 : 0;
+  return `M50 50 L${x0.toFixed(2)} ${y0.toFixed(2)} A${PIE_R} ${PIE_R} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)} Z`;
+}
+
+// The part of the circle already swept by the hand (angle in degrees, clockwise from 12 o'clock)
+function pieSweepPath(deg) {
+  if (deg <= 0.1) return '';
+  if (deg >= 359.9) {
+    return `M50 ${50 - PIE_R} A${PIE_R} ${PIE_R} 0 1 1 50 ${50 + PIE_R} A${PIE_R} ${PIE_R} 0 1 1 50 ${50 - PIE_R} Z`;
+  }
+  const r = (deg * Math.PI) / 180;
+  const x = 50 + PIE_R * Math.sin(r);
+  const y = 50 - PIE_R * Math.cos(r);
+  return `M50 50 L50 ${50 - PIE_R} A${PIE_R} ${PIE_R} 0 ${deg > 180 ? 1 : 0} 1 ${x.toFixed(2)} ${y.toFixed(2)} Z`;
+}
+
+function PieView({ viewId, pattern, registry, size = 'md', bar = true }) {
+  const rootRef = useRef(null);
+  const handRef = useRef(null);
+  const sweepRef = useRef(null);
+  const symbols = pattern.code.split(' ');
+  const n = symbols.length;
+  const accent = accentFor(pattern.color);
+  const anySound = symbols.some((sy) => sy === '•');
+  const outline = anySound ? '#ffffff' : '#9ca3af';
+  const maxPx = { sm: 56, md: 72, lg: 120 }[size] || 72;
+
+  // inject the pie CSS once
+  useEffect(() => {
+    if (!document.getElementById('abel-pie-css')) {
+      const st = document.createElement('style');
+      st.id = 'abel-pie-css';
+      st.textContent = PIE_CSS;
+      document.head.appendChild(st);
+    }
+  }, []);
+
+  // register the slices; the playhead (hand + swept area) is driven through a small "bar" adapter,
+  // so the audio-clock animator moves it exactly like the progress bar of the other views
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return undefined;
+    const progress = (p) => {
+      const deg = Math.max(0, Math.min(1, p)) * 360;
+      if (handRef.current) {
+        handRef.current.setAttribute('transform', `rotate(${deg.toFixed(2)} 50 50)`);
+        handRef.current.style.opacity = deg > 0.1 ? '1' : '0';
+      }
+      if (sweepRef.current) sweepRef.current.setAttribute('d', pieSweepPath(deg));
+    };
+    const barAdapter = {
+      style: {
+        set transform(v) {
+          const m = /scaleX\(([-0-9.e]+)\)/.exec(v);
+          progress(m ? parseFloat(m[1]) : 0);
+        }
+      }
+    };
+    const entry = {
+      steps: Array.from(root.querySelectorAll('[data-step]')),
+      bar: bar ? barAdapter : null,
+      tile: root.closest('[data-tile]')
+    };
+    registry.current.set(viewId, entry);
+    return () => {
+      if (registry.current.get(viewId) === entry) registry.current.delete(viewId);
+      entry.steps.forEach((el) => el.removeAttribute('data-state'));
+      progress(0);
+      if (entry.tile) entry.tile.removeAttribute('data-active');
+    };
+  }, [viewId, pattern, registry, bar]);
+
+  return (
+    <div ref={rootRef} className="w-full" style={{ '--c': accent, '--so': outline }}>
+      <svg
+        viewBox="0 0 100 100"
+        style={{ display: 'block', width: '100%', maxWidth: maxPx, margin: '0 auto', overflow: 'visible' }}
+      >
+        {symbols.map((sy, i) => {
+          const cls = 'abel-pie ' + (sy === '•' ? 'abel-pie-on' : 'abel-pie-off');
+          if (n === 1) {
+            return <circle key={i} data-step data-pie="1" className={cls} cx="50" cy="50" r={PIE_R} />;
+          }
+          return <path key={i} data-step data-pie="1" className={cls} d={pieSlicePath(i, n)} />;
+        })}
+        {bar && (
+          <g style={{ pointerEvents: 'none' }}>
+            <path ref={sweepRef} d="" fill="rgba(255,255,255,0.10)" stroke="none" />
+            <line
+              ref={handRef}
+              x1="50"
+              y1="50"
+              x2="50"
+              y2={50 - PIE_R}
+              stroke="#ffffff"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              style={{ opacity: 0 }}
+            />
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+}
+
+// Every view goes through this switch: dots and dashes, music notation, or pie
+function PatternView(props) {
+  if (NOTATION.pie) return <PieView {...props} />;
+  if (NOTATION.on) return <NotationView {...props} ghostNotes={NOTATION.ghost} />;
+  return <DotsView {...props} />;
+}
 
 const DotsView = ({ viewId, pattern, registry, size = 'md', bar = true }) => {
   const rootRef = useRef(null);
@@ -1003,30 +1137,20 @@ const ABELRhythmDominoes = () => {
     setHapticsEnabled(next);
     safeVibrate(next ? 30 : 0); // short confirmation buzz when switched on
     try {
-      if (window.storage) {
-        Promise.resolve(window.storage.set('abel:haptics', next ? '1' : '0')).catch(() => {});
-      }
+      window.localStorage.setItem('abel:haptics', next ? '1' : '0');
     } catch (e) {
       /* preference could not be saved: ignore */
     }
   };
 
-  // Restore the saved preference (if the environment provides storage)
+  // Restore the saved preference (if the browser allows localStorage)
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        if (window.storage) {
-          const r = await window.storage.get('abel:haptics');
-          if (!cancelled && r) setHapticsEnabled(r.value === '1');
-        }
-      } catch (e) {
-        /* no saved preference */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    try {
+      const v = window.localStorage.getItem('abel:haptics');
+      if (v !== null) setHapticsEnabled(v === '1');
+    } catch (e) {
+      /* no saved preference */
+    }
   }, []);
   const [beatsPerBar, setBeatsPerBar] = useState(4);
   const [selectedInstrument, setSelectedInstrument] = useState('snare');
@@ -1415,10 +1539,15 @@ const ABELRhythmDominoes = () => {
   const tempoHoldRef = useRef({ t: null, i: null });
   const tempoSkipRef = useRef(false);
 
-  // ---------- Notation mode: dots and dashes shown as music notation ----------
-  const [notationMode, setNotationMode] = useState(false);
+  // ---------- Display mode: dots and dashes, music notation, or pie circles ----------
+  const [displayMode, setDisplayMode] = useState('dots'); // 'dots' | 'notation' | 'pie'
   const [notationGhost, setNotationGhost] = useState(false); // dashes drawn as ghost notes instead of rests
+  const notationMode = displayMode === 'notation';
+  const pieMode = displayMode === 'pie';
+  const setNotationMode = (on) => setDisplayMode(on ? 'notation' : 'dots');
+  const setPieMode = (on) => setDisplayMode(on ? 'pie' : 'dots');
   NOTATION.on = notationMode;
+  NOTATION.pie = pieMode;
   NOTATION.ghost = notationGhost;
 
   const clampTempo = (v) => Math.min(300, Math.max(1, Math.round(v)));
@@ -2059,7 +2188,6 @@ const ABELRhythmDominoes = () => {
             <button
               onClick={() => setShowInfo(!showInfo)}
               className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
-              aria-label="Toggle info"
             >
               <Info size={24} />
             </button>
@@ -2355,6 +2483,24 @@ const ABELRhythmDominoes = () => {
                   </div>
                 </div>
               )}
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="piemode"
+                  checked={pieMode}
+                  onChange={(e) => setPieMode(e.target.checked)}
+                  className="w-4 h-4 rounded"
+                />
+                <label htmlFor="piemode" className="text-sm cursor-pointer font-bold">
+                  Pie Mode (show patterns as circles)
+                </label>
+              </div>
+              {pieMode && (
+                <div className="ml-6 text-xs text-gray-500">
+                  Each pattern is a circle: one beat = one full turn, clockwise from 12 o'clock. A filled slice is a note, an empty slice is a rest. A white hand sweeps around the circle as the beat plays.
+                </div>
+              )}
+
             </div>
           </div>
 
@@ -2839,7 +2985,6 @@ const ABELRhythmDominoes = () => {
   );
 };
 
-/* ---------- Mount ---------- */
 ReactDOM.createRoot(document.getElementById('root')).render(<ABELRhythmDominoes />);
   </script>
 </body>
