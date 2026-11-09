@@ -2,40 +2,43 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#111827" />
-  <meta name="description" content="ABEL Rhythm Alphabet. See it. Feel it. Hear it. Play it." />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ABEL Rhythm Alphabet</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🥁%3C/text%3E%3C/svg%3E" />
+  <meta name="theme-color" content="#111827" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A5%81%3C/text%3E%3C/svg%3E" />
 
-  <!-- Tailwind CSS (Play CDN) -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS (play CDN) -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 
   <style>
-    html, body { margin: 0; min-height: 100%; background: #111827; }
-    #root-loading { color: #9ca3af; font-family: system-ui, sans-serif; padding: 24px; }
+    html, body { margin: 0; background: #111827; }
+    #root { min-height: 100vh; }
+    #loading {
+      color: #9ca3af;
+      font-family: system-ui, sans-serif;
+      padding: 2rem;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
-  <div id="root"><div id="root-loading">Loading ABEL Rhythm Alphabet…</div></div>
+  <div id="root"><div id="loading">Loading ABEL Rhythm Alphabet…</div></div>
 
-  <!-- React 18 -->
-  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-  <!-- Lucide icons (React build) -->
-  <script crossorigin src="https://unpkg.com/lucide-react@0.383.0/dist/umd/lucide-react.min.js"></script>
-  <!-- Babel (compiles the JSX below, in the browser) -->
-  <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+  <!-- React 18 + ReactDOM (UMD builds) -->
+  <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+  <!-- Lucide icons for React (UMD build, exposes window.LucideReact) -->
+  <script crossorigin src="https://cdn.jsdelivr.net/npm/lucide-react@0.383.0/dist/umd/lucide-react.min.js"></script>
+
+  <!-- Babel standalone: compiles the JSX below in the browser -->
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js"></script>
 
   <script type="text/babel" data-presets="react">
-/* =====================================================================
-   ABEL RHYTHM ALPHABET – single-file app
-   ===================================================================== */
 const { useState, useEffect, useRef } = React;
 
-/* ---------- Icons (Lucide from the CDN, with built-in fallback) ---------- */
-const LucideLib = window.LucideReact || window['lucide-react'] || window.lucideReact || {};
-const makeIcon = (children) => ({ size = 24, className = '' }) => (
+/* ---------- Icons: Lucide from CDN, with tiny inline fallbacks if the CDN is unavailable ---------- */
+const mkIcon = (children) => ({ size = 24, ...rest }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
@@ -46,38 +49,38 @@ const makeIcon = (children) => ({ size = 24, className = '' }) => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
-    className={className}
+    {...rest}
   >
     {children}
   </svg>
 );
-const Play = LucideLib.Play || makeIcon(<polygon points="6 3 20 12 6 21 6 3" />);
-const Pause =
-  LucideLib.Pause ||
-  makeIcon(
-    <>
-      <rect x="14" y="4" width="4" height="16" rx="1" />
-      <rect x="6" y="4" width="4" height="16" rx="1" />
-    </>
-  );
-const Info =
-  LucideLib.Info ||
-  makeIcon(
-    <>
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 16v-4" />
-      <path d="M12 8h.01" />
-    </>
-  );
-const Volume2 =
-  LucideLib.Volume2 ||
-  makeIcon(
-    <>
-      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-    </>
-  );
+const LR = window.LucideReact || {};
+const Play = LR.Play || mkIcon(<polygon points="6 3 20 12 6 21 6 3" />);
+const Pause = LR.Pause || mkIcon(<><rect x="14" y="4" width="4" height="16" rx="1" /><rect x="6" y="4" width="4" height="16" rx="1" /></>);
+const Info = LR.Info || mkIcon(<><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></>);
+const Volume2 = LR.Volume2 || mkIcon(<><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /></>);
+
+/* ---------- Storage shim: uses localStorage when window.storage is not provided ---------- */
+if (!window.storage) {
+  window.storage = {
+    async get(key) {
+      try {
+        const v = localStorage.getItem(key);
+        return v === null ? null : { key, value: v };
+      } catch (e) {
+        return null;
+      }
+    },
+    async set(key, value) {
+      try {
+        localStorage.setItem(key, value);
+        return { key, value };
+      } catch (e) {
+        return null;
+      }
+    }
+  };
+}
 
 /* =====================================================================
    DATA
@@ -143,9 +146,6 @@ const CODE_GROUPS = [
 
 const MAX_LAYERS = 4;
 
-// Vibration pulse length (ms): 1 = ghost note, 2 = played note, 3 = beat, 4 = downbeat
-const HAPTIC_MS = { 1: 6, 2: 14, 3: 24, 4: 42 };
-
 const buildFused = (list) => ({
   letter: list.map((p) => p.letter).join(''),
   code: list.map((p) => p.code).join(' '),
@@ -197,7 +197,7 @@ const setStepState = (entry, i, state, popMs = 0) => {
   el.setAttribute('data-state', state);
   if (popMs && el.animate) {
     try {
-      el.animate(POP[state], { duration: popMs, easing: 'ease-out' });
+      el.animate((el.hasAttribute('data-n') ? POP_N : POP)[state], { duration: popMs, easing: 'ease-out' });
     } catch (e) {
       /* ignore */
     }
@@ -214,7 +214,280 @@ const setTileActive = (entry, on) => {
    PATTERN VIEW – one animated row of dots / dashes
    (registers itself so the audio-clock animator can drive it directly)
    ===================================================================== */
-const PatternView = ({ viewId, pattern, registry, size = 'md', bar = true }) => {
+/* ---------- Notation mode: patterns drawn as music notation (1 beat = 1 quarter note) ---------- */
+// Module-level switch, set by the main component on every render
+const NOTATION = { on: false, ghost: false };
+
+// Pop animations for notation glyphs (uniform scale only, so rests are never stretched)
+const POP_N = {
+  hit: [{ transform: 'scale(1.8)' }, { transform: 'scale(1.35)' }],
+  rest: [{ transform: 'scale(1.5)' }, { transform: 'scale(1.2)' }],
+  ghost: [{ transform: 'scale(1.5)' }, { transform: 'scale(1.2)' }]
+};
+
+const NOTATION_CSS = `
+.abel-n-fill{fill:var(--c)}
+.abel-n-stroke{stroke:var(--c);fill:none;stroke-linecap:round;stroke-linejoin:round}
+.abel-n-stem{stroke:var(--c);opacity:.85}
+.abel-n-line{stroke:#9ca3af;fill:none;stroke-width:1.2}
+.abel-n-text{fill:#9ca3af;stroke:none}
+.abel-n-step{transform-box:fill-box;transform-origin:center;opacity:.8;transition:transform .12s ease-out,opacity .12s ease-out,filter .15s ease-out}
+.abel-n-ghost{opacity:.55}
+.abel-n-step[data-state="hit"]{opacity:1;transform:scale(1.35);filter:drop-shadow(0 0 5px var(--c))}
+.abel-n-step[data-state="rest"]{opacity:1;transform:scale(1.2);filter:drop-shadow(0 0 4px #e5e7eb)}
+.abel-n-step[data-state="rest"] .abel-n-stroke{stroke:#e5e7eb}
+.abel-n-step[data-state="rest"] .abel-n-fill{fill:#e5e7eb}
+.abel-n-step[data-state="ghost"]{opacity:1;transform:scale(1.2);filter:drop-shadow(0 0 5px var(--c))}
+`;
+
+// Rests: quarter rest (squiggle) or flagged rests (eighth, 16th, 32nd...), centred on (cx, cy)
+const NotationRest = ({ cx, cy, s, f }) => {
+  const tr = `translate(${cx} ${cy}) scale(${s})`;
+  if (f === 0) {
+    return (
+      <g transform={tr}>
+        <path d="M-2 -10 L3 -4 L-2 1 L2 6 C-4 5 -5 10 0 12" className="abel-n-stroke" strokeWidth="2" />
+      </g>
+    );
+  }
+  const h = 9 + 5 * f;
+  const y0 = -h / 2;
+  const y1 = h / 2;
+  const xs = (y) => 2.5 - 5 * ((y - y0) / (y1 - y0));
+  const flags = [];
+  for (let k = 0; k < f; k++) {
+    const yk = y0 + 3 + 5 * k;
+    const fx = xs(yk) - 3.4;
+    flags.push(
+      <g key={k}>
+        <circle cx={fx} cy={yk} r="1.9" className="abel-n-fill" />
+        <path
+          d={`M${fx + 1.3} ${yk + 1.3} Q${xs(yk) - 1} ${yk + 3.2} ${xs(yk + 3.2)} ${yk + 3.2}`}
+          className="abel-n-stroke"
+          strokeWidth="1.4"
+        />
+      </g>
+    );
+  }
+  return (
+    <g transform={tr}>
+      <line x1={xs(y0)} y1={y0} x2={xs(y1)} y2={y1} className="abel-n-stroke" strokeWidth="1.8" />
+      {flags}
+    </g>
+  );
+};
+
+// One beat = one quarter note. n steps per beat:
+// n=1 quarter, n=2 eighths, n=3 eighth triplet, n=4 sixteenths, n=5/6/7 sixteenth tuplets, n=8 thirty-seconds...
+// (flags = floor(log2 n); any n that is not a power of 2 gets a tuplet bracket)
+function NotationView({ viewId, pattern, registry, size = 'md', bar = true, ghostNotes = false }) {
+  const rootRef = useRef(null);
+  const [w, setW] = useState(0);
+  const symbols = pattern.code.split(' ');
+  const n = symbols.length;
+  const accent = accentFor(pattern.color);
+
+  // inject the notation CSS once
+  useEffect(() => {
+    if (!document.getElementById('abel-notation-css')) {
+      const st = document.createElement('style');
+      st.id = 'abel-notation-css';
+      st.textContent = NOTATION_CSS;
+      document.head.appendChild(st);
+    }
+  }, []);
+
+  // match the drawing to the real width of its container (so the playhead lines up)
+  React.useLayoutEffect(() => {
+    const el = rootRef.current;
+    if (!el) return undefined;
+    const update = () => setW(el.clientWidth);
+    update();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // register the glyphs so the audio-clock animator can light them up
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return undefined;
+    const entry = {
+      steps: Array.from(root.querySelectorAll('[data-step]')),
+      bar: root.querySelector('[data-bar]'),
+      tile: root.closest('[data-tile]')
+    };
+    registry.current.set(viewId, entry);
+    return () => {
+      if (registry.current.get(viewId) === entry) registry.current.delete(viewId);
+      entry.steps.forEach((el) => el.removeAttribute('data-state'));
+      if (entry.bar) entry.bar.style.transform = 'scaleX(0)';
+      if (entry.tile) entry.tile.removeAttribute('data-active');
+    };
+  }, [viewId, pattern, registry, ghostNotes]);
+
+  const S = { sm: 0.7, md: 0.9, lg: 1.25 }[size] || 0.9;
+  const W = w || n * 24;
+  const H = 52 * S;
+  const slot = W / n;
+  const noteY = 42 * S;
+  const stemTop = 16 * S;
+  const rx = 4.4 * S;
+  const ry = 3.3 * S;
+  const f = Math.floor(Math.log2(n)); // number of flags / beams
+  const isTuplet = (n & (n - 1)) !== 0;
+  const sound = symbols.map((sy) => sy === '•');
+  const isNote = sound.map((s) => s || ghostNotes); // dashes are ghost notes or rests
+  const cx = (i) => (i + 0.5) * slot;
+  const stemX = (i) => cx(i) + rx - 0.7 * S;
+
+  // consecutive notes are beamed together; a lone note gets flags; rests break the beam
+  const runs = [];
+  for (let i = 0; i < n; ) {
+    if (isNote[i]) {
+      let j = i;
+      while (j + 1 < n && isNote[j + 1]) j++;
+      runs.push([i, j]);
+      i = j + 1;
+    } else {
+      i++;
+    }
+  }
+
+  const beams = [];
+  const flags = [];
+  if (f >= 1) {
+    runs.forEach(([a, b]) => {
+      if (b > a) {
+        for (let k = 0; k < f; k++) {
+          beams.push(
+            <rect
+              key={`beam-${a}-${k}`}
+              x={stemX(a) - 0.7 * S}
+              y={stemTop + k * 5 * S}
+              width={stemX(b) - stemX(a) + 1.4 * S}
+              height={3.2 * S}
+              rx={0.8}
+              className="abel-n-fill"
+            />
+          );
+        }
+      } else {
+        for (let k = 0; k < f; k++) {
+          const y0 = stemTop + k * 5 * S;
+          const sx = stemX(a);
+          flags.push(
+            <path
+              key={`flag-${a}-${k}`}
+              d={`M${sx} ${y0} C${sx} ${y0 + 5 * S} ${sx + 8 * S} ${y0 + 6 * S} ${sx + 6 * S} ${y0 + 13 * S}`}
+              className="abel-n-stroke"
+              strokeWidth={1.8 * S}
+            />
+          );
+        }
+      }
+    });
+  }
+
+  const bx1 = cx(0) - rx;
+  const bx2 = cx(n - 1) + rx + 0.5;
+  const by = 8 * S;
+  const bmid = (bx1 + bx2) / 2;
+  const bgap = 7 * S;
+
+  return (
+    <div ref={rootRef} className="w-full" style={{ '--c': accent }}>
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block', overflow: 'visible' }}>
+        {/* one-line percussion staff */}
+        <line x1="0" y1={noteY} x2={W} y2={noteY} stroke="#4b5563" strokeWidth="1" />
+
+        {/* stems, beams, flags */}
+        {symbols.map((_, i) =>
+          isNote[i] ? (
+            <line
+              key={`stem-${i}`}
+              x1={stemX(i)}
+              y1={noteY - 0.5 * S}
+              x2={stemX(i)}
+              y2={stemTop}
+              className="abel-n-stem"
+              strokeWidth={1.3 * S}
+            />
+          ) : null
+        )}
+        {beams}
+        {flags}
+
+        {/* tuplet bracket + number */}
+        {isTuplet && (
+          <g className="abel-n-line">
+            <path d={`M${bx1} ${by + 4 * S} L${bx1} ${by} L${bmid - bgap} ${by}`} />
+            <path d={`M${bmid + bgap} ${by} L${bx2} ${by} L${bx2} ${by + 4 * S}`} />
+            <text
+              x={bmid}
+              y={by + 3.6 * S}
+              textAnchor="middle"
+              fontSize={10 * S}
+              fontStyle="italic"
+              fontWeight="700"
+              className="abel-n-text"
+            >
+              {n}
+            </text>
+          </g>
+        )}
+
+        {/* noteheads / ghost notes / rests (one animated glyph per step) */}
+        {symbols.map((_, i) => {
+          const x = cx(i);
+          if (sound[i]) {
+            return (
+              <g key={`g-${i}`} data-step data-n="1" className="abel-n-step">
+                <ellipse cx={x} cy={noteY} rx={rx} ry={ry} transform={`rotate(-20 ${x} ${noteY})`} className="abel-n-fill" />
+              </g>
+            );
+          }
+          if (ghostNotes) {
+            const pl = x - rx - 3.2 * S;
+            const pr = x + rx + 3.2 * S;
+            return (
+              <g key={`g-${i}`} data-step data-n="1" className="abel-n-step abel-n-ghost">
+                <ellipse cx={x} cy={noteY} rx={rx} ry={ry} transform={`rotate(-20 ${x} ${noteY})`} className="abel-n-fill" />
+                <path
+                  d={`M${pl + 2 * S} ${noteY - 5 * S} Q${pl - 1.5 * S} ${noteY} ${pl + 2 * S} ${noteY + 5 * S}`}
+                  className="abel-n-stroke"
+                  strokeWidth={1.2 * S}
+                />
+                <path
+                  d={`M${pr - 2 * S} ${noteY - 5 * S} Q${pr + 1.5 * S} ${noteY} ${pr - 2 * S} ${noteY + 5 * S}`}
+                  className="abel-n-stroke"
+                  strokeWidth={1.2 * S}
+                />
+              </g>
+            );
+          }
+          return (
+            <g key={`g-${i}`} data-step data-n="1" className="abel-n-step">
+              <NotationRest cx={x} cy={noteY} s={S} f={f} />
+            </g>
+          );
+        })}
+      </svg>
+      {bar && (
+        <div className="abel-bar">
+          <div data-bar />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Every view goes through this switch: dots and dashes, or notation
+const PatternView = (props) =>
+  NOTATION.on ? <NotationView {...props} ghostNotes={NOTATION.ghost} /> : <DotsView {...props} />;
+
+const DotsView = ({ viewId, pattern, registry, size = 'md', bar = true }) => {
   const rootRef = useRef(null);
   const symbols = pattern.code.split(' ');
   const n = symbols.length;
@@ -292,7 +565,7 @@ const PatternView = ({ viewId, pattern, registry, size = 'md', bar = true }) => 
 };
 
 /* =====================================================================
-   DOMINO CARD (tap = play / add, long-press = start a quick merge)
+   DOMINO CARD
    ===================================================================== */
 const DominoCard = ({
   pattern,
@@ -674,7 +947,6 @@ const getHeardTime = (ctx) => {
    MAIN COMPONENT
    ===================================================================== */
 const ABELRhythmDominoes = () => {
-  /* ---------------- State ---------------- */
   const [showInfo, setShowInfo] = useState(true);
   const [tempo, setTempo] = useState(120);
   const [metronomeEnabled, setMetronomeEnabled] = useState(true);
@@ -682,87 +954,12 @@ const ABELRhythmDominoes = () => {
   const [syncOffset, setSyncOffset] = useState(0);
   const [showSync, setShowSync] = useState(false);
   const [hapticsEnabled, setHapticsEnabled] = useState(true); // on by default (a saved choice overrides it)
-  const [beatsPerBar, setBeatsPerBar] = useState(4);
-  const [selectedInstrument, setSelectedInstrument] = useState('snare');
-  const [selectedPattern, setSelectedPattern] = useState(null);
-  const [playKind, setPlayKind] = useState(null); // null | 'solo' | 'sequence' | 'fused' | 'layers'
-  const [sequence, setSequence] = useState([]);
-  const [isSequenceMode, setIsSequenceMode] = useState(false);
-  const [isFusionMode, setIsFusionMode] = useState(false);
-  const [isLayerMode, setIsLayerMode] = useState(false);
-  const [fusionPatterns, setFusionPatterns] = useState([]);
-  const [fusedPattern, setFusedPattern] = useState(null);
-  const [layers, setLayers] = useState([
-    { pattern: null, instrument: 'snare' },
-    { pattern: null, instrument: 'kick' },
-    { pattern: null, instrument: 'hihat' },
-    { pattern: null, instrument: 'clap' }
-  ]);
-  const [activeLayer, setActiveLayer] = useState(0);
-  const [dragState, setDragState] = useState(null); // { from, over, after, x, y }
-  const [mergeFirst, setMergeFirst] = useState(null);
-  const [tempoDraft, setTempoDraft] = useState(null); // text being typed (null = show the real tempo)
 
-  const isPlaying = playKind !== null;
-
-  /* ---------------- Refs ---------------- */
-  // Engine
-  const ctxRef = useRef(null);
-  const masterRef = useRef(null);
-  const schedulerIdRef = useRef(null);
-  const rafRef = useRef(null);
-  const nextBeatRef = useRef(0);
-  const beatCountRef = useRef(0);
-  const seqPosRef = useRef(0);
-  const segIdRef = useRef(0);
-  const segmentsRef = useRef([]);
-  const playRef = useRef(null);
-  const samplesRef = useRef(null);
-  const voicesRef = useRef(new Map());
-
-  // Live values read by the audio scheduler / animator (no stale closures)
-  const settingsRef = useRef({});
-  const sequenceRef = useRef([]);
-  const fusedRef = useRef(null);
-  const layersRef = useRef([]);
-  settingsRef.current = {
-    tempo,
-    metronome: metronomeEnabled,
-    ghost: ghostNotesEnabled,
-    instrument: selectedInstrument,
-    sync: syncOffset,
-    beats: beatsPerBar
-  };
-  sequenceRef.current = sequence;
-  fusedRef.current = fusedPattern;
-  layersRef.current = layers;
-
-  // Animation
-  const registryRef = useRef(new Map());
-  const litRef = useRef(new Map());
-  const beatsContainerRef = useRef(null);
-  const beatElsRef = useRef([]);
-  const beatLitRef = useRef({ segId: null });
-
-  // Haptics
-  const hapticsOnRef = useRef(false);
-  const hapticLastRef = useRef({ segId: null, steps: [] });
-
-  // Sequence drag & drop + "added" feedback
-  const dragRef = useRef(null);
-  const seqTileRefs = useRef([]);
-  const dragChipRef = useRef(null);
-  const prevSeqLenRef = useRef(0);
-  const seqCountRef = useRef(null);
-  const pillElRef = useRef(null);
-  const pillTimerRef = useRef(null);
-
-  // Tempo input
-  const tempoHoldRef = useRef({ t: null, i: null });
-  const tempoSkipRef = useRef(false);
-
-  /* ---------------- Haptics (Web Vibration API, with graceful fallback) ---------------- */
+  // ---------- Haptics (Web Vibration API, with graceful fallback) ----------
   const hapticsSupported = typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
+  // The Vibration API only controls duration, so "intensity" = pulse length (ms):
+  // 1 = ghost note, 2 = played note, 3 = beat, 4 = downbeat (first beat of the bar)
+  const HAPTIC_MS = { 1: 6, 2: 14, 3: 24, 4: 42 };
   const safeVibrate = (pattern) => {
     try {
       if (hapticsSupported) return navigator.vibrate(pattern);
@@ -771,7 +968,9 @@ const ABELRhythmDominoes = () => {
     }
     return false;
   };
+  const hapticsOnRef = useRef(false);
   hapticsOnRef.current = hapticsEnabled && hapticsSupported;
+  const hapticLastRef = useRef({ segId: null, steps: [] });
 
   // Called from the audio-clock animator: fires exactly when a beat / note is heard
   const fireHaptics = (seg, p) => {
@@ -804,16 +1003,91 @@ const ABELRhythmDominoes = () => {
     setHapticsEnabled(next);
     safeVibrate(next ? 30 : 0); // short confirmation buzz when switched on
     try {
-      localStorage.setItem('abel:haptics', next ? '1' : '0');
+      if (window.storage) {
+        Promise.resolve(window.storage.set('abel:haptics', next ? '1' : '0')).catch(() => {});
+      }
     } catch (e) {
       /* preference could not be saved: ignore */
     }
   };
 
-  /* ---------------- Effects: setup / cleanup ---------------- */
+  // Restore the saved preference (if the environment provides storage)
   useEffect(() => {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    ctxRef.current = new AC();
+    let cancelled = false;
+    (async () => {
+      try {
+        if (window.storage) {
+          const r = await window.storage.get('abel:haptics');
+          if (!cancelled && r) setHapticsEnabled(r.value === '1');
+        }
+      } catch (e) {
+        /* no saved preference */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const [beatsPerBar, setBeatsPerBar] = useState(4);
+  const [selectedInstrument, setSelectedInstrument] = useState('snare');
+  const [selectedPattern, setSelectedPattern] = useState(null);
+  const [playKind, setPlayKind] = useState(null); // null | 'solo' | 'sequence' | 'fused' | 'layers'
+  const [sequence, setSequence] = useState([]);
+  const [isSequenceMode, setIsSequenceMode] = useState(false);
+  const [isFusionMode, setIsFusionMode] = useState(false);
+  const [isLayerMode, setIsLayerMode] = useState(false);
+  const [fusionPatterns, setFusionPatterns] = useState([]);
+  const [fusedPattern, setFusedPattern] = useState(null);
+  const [layers, setLayers] = useState([
+    { pattern: null, instrument: 'snare' },
+    { pattern: null, instrument: 'kick' },
+    { pattern: null, instrument: 'hihat' },
+    { pattern: null, instrument: 'clap' }
+  ]);
+  const [activeLayer, setActiveLayer] = useState(0);
+
+  const isPlaying = playKind !== null;
+
+  // Engine refs
+  const ctxRef = useRef(null);
+  const masterRef = useRef(null);
+  const schedulerIdRef = useRef(null);
+  const rafRef = useRef(null);
+  const nextBeatRef = useRef(0);
+  const beatCountRef = useRef(0);
+  const seqPosRef = useRef(0);
+  const segIdRef = useRef(0);
+  const segmentsRef = useRef([]);
+  const playRef = useRef(null);
+  const samplesRef = useRef(null);
+  const voicesRef = useRef(new Map());
+
+  // Live values read by the audio scheduler / animator (no stale closures)
+  const settingsRef = useRef({});
+  const sequenceRef = useRef([]);
+  const fusedRef = useRef(null);
+  const layersRef = useRef([]);
+  settingsRef.current = {
+    tempo,
+    metronome: metronomeEnabled,
+    ghost: ghostNotesEnabled,
+    instrument: selectedInstrument,
+    sync: syncOffset,
+    beats: beatsPerBar
+  };
+  sequenceRef.current = sequence;
+  fusedRef.current = fusedPattern;
+  layersRef.current = layers;
+
+  // Animation refs
+  const registryRef = useRef(new Map());
+  const litRef = useRef(new Map());
+  const beatsContainerRef = useRef(null);
+  const beatElsRef = useRef([]);
+  const beatLitRef = useRef({ segId: null });
+
+  useEffect(() => {
+    ctxRef.current = new (window.AudioContext || window.webkitAudioContext)();
     const createdCtx = ctxRef.current;
     renderSamples(createdCtx)
       .then((s) => {
@@ -832,16 +1106,6 @@ const ABELRhythmDominoes = () => {
     };
   }, []);
 
-  // Restore the saved haptics preference
-  useEffect(() => {
-    try {
-      const v = localStorage.getItem('abel:haptics');
-      if (v !== null) setHapticsEnabled(v === '1');
-    } catch (e) {
-      /* no saved preference */
-    }
-  }, []);
-
   // Re-collect the beat lights whenever their number changes
   useEffect(() => {
     beatElsRef.current = beatsContainerRef.current
@@ -849,19 +1113,6 @@ const ABELRhythmDominoes = () => {
       : [];
     beatLitRef.current.segId = null;
   }, [beatsPerBar]);
-
-  // Keeps the page from scrolling while a sequence frame is being dragged (must be non-passive)
-  useEffect(() => {
-    const block = (e) => {
-      if (dragRef.current && e.cancelable) e.preventDefault();
-    };
-    window.addEventListener('touchmove', block, { passive: false });
-    return () => window.removeEventListener('touchmove', block);
-  }, []);
-
-  useEffect(() => {
-    if (isFusionMode) setMergeFirst(null); // quick merge is not needed in Fusion mode
-  }, [isFusionMode]);
 
   /* ---------------- Animator (driven by the audio clock) ---------------- */
   const clearLit = () => {
@@ -1159,7 +1410,66 @@ const ABELRhythmDominoes = () => {
     }
   };
 
+  // ---------- Tempo: slider, typed value, and +/- buttons ----------
+  const [tempoDraft, setTempoDraft] = useState(null); // text being typed (null = show the real tempo)
+  const tempoHoldRef = useRef({ t: null, i: null });
+  const tempoSkipRef = useRef(false);
+
+  // ---------- Notation mode: dots and dashes shown as music notation ----------
+  const [notationMode, setNotationMode] = useState(false);
+  const [notationGhost, setNotationGhost] = useState(false); // dashes drawn as ghost notes instead of rests
+  NOTATION.on = notationMode;
+  NOTATION.ghost = notationGhost;
+
+  const clampTempo = (v) => Math.min(300, Math.max(1, Math.round(v)));
+
+  const changeTempo = (v) => {
+    const next = clampTempo(v);
+    setTempo(next);
+    settingsRef.current.tempo = next; // the very next scheduled beat already uses it
+    const ctx = ctxRef.current;
+    const p = playRef.current;
+    if (p && ctx && nextBeatRef.current - ctx.currentTime > 1) {
+      // a long beat (slow tempo) is already queued: restart so the new tempo is heard right away
+      startPlayback(p.mode, p.pattern);
+    }
+  };
+
+  const commitTempoDraft = () => {
+    if (tempoSkipRef.current) {
+      tempoSkipRef.current = false;
+      setTempoDraft(null);
+      return;
+    }
+    if (tempoDraft === null) return;
+    const n = parseInt(tempoDraft, 10);
+    if (!Number.isNaN(n)) changeTempo(n);
+    setTempoDraft(null);
+  };
+
+  const stopTempoHold = () => {
+    clearTimeout(tempoHoldRef.current.t);
+    clearInterval(tempoHoldRef.current.i);
+    tempoHoldRef.current = { t: null, i: null };
+  };
+  const startTempoHold = (delta) => {
+    stopTempoHold();
+    const step = () => changeTempo(settingsRef.current.tempo + delta);
+    step();
+    // hold the button to keep changing the tempo
+    tempoHoldRef.current.t = setTimeout(() => {
+      tempoHoldRef.current.i = setInterval(step, 70);
+    }, 400);
+  };
+  useEffect(() => () => stopTempoHold(), []);
+
   // ---------- Quick merge: long-press a pattern, then tap a second one ----------
+  const [mergeFirst, setMergeFirst] = useState(null);
+
+  useEffect(() => {
+    if (isFusionMode) setMergeFirst(null); // not needed in Fusion mode
+  }, [isFusionMode]);
+
   const startMerge = (pattern) => {
     setMergeFirst(pattern);
     if (hapticsOnRef.current) safeVibrate(20);
@@ -1238,6 +1548,11 @@ const ABELRhythmDominoes = () => {
   };
 
   // ---------- Drag & drop reordering of the sequence (mouse + touch) ----------
+  const [dragState, setDragState] = useState(null); // { from, over, after, x, y }
+  const dragRef = useRef(null);
+  const seqTileRefs = useRef([]);
+  const dragChipRef = useRef(null);
+
   const startDrag = (e, index) => {
     if (e.button !== undefined && e.button !== 0) return;
     e.preventDefault();
@@ -1311,6 +1626,11 @@ const ABELRhythmDominoes = () => {
   };
 
   // ---------- "Placed in the sequencer" feedback (animation + subtle vibration) ----------
+  const prevSeqLenRef = useRef(0);
+  const seqCountRef = useRef(null);
+  const pillElRef = useRef(null);
+  const pillTimerRef = useRef(null);
+
   // Small floating counter, shown when the sequencer is scrolled out of view
   const showCounterPill = (n) => {
     let el = pillElRef.current;
@@ -1475,6 +1795,15 @@ const ABELRhythmDominoes = () => {
   );
 
   // Long-press (touch / pen) or press-and-move (mouse) on a frame starts the drag
+  useEffect(() => {
+    // keeps the page from scrolling while a frame is being dragged (must be non-passive)
+    const block = (e) => {
+      if (dragRef.current && e.cancelable) e.preventDefault();
+    };
+    window.addEventListener('touchmove', block, { passive: false });
+    return () => window.removeEventListener('touchmove', block);
+  }, []);
+
   const onTilePointerDown = (e, index) => {
     if (e.target.closest && e.target.closest('button')) return; // leave the × button alone
     const isMouse = e.pointerType === 'mouse';
@@ -1609,49 +1938,6 @@ const ABELRhythmDominoes = () => {
     setLayers((prev) => prev.map((l, i) => (i === index ? { ...l, instrument } : l)));
   };
 
-  // ---------- Tempo: slider, typed value, and +/- buttons ----------
-  const clampTempo = (v) => Math.min(300, Math.max(1, Math.round(v)));
-
-  const changeTempo = (v) => {
-    const next = clampTempo(v);
-    setTempo(next);
-    settingsRef.current.tempo = next; // the very next scheduled beat already uses it
-    const ctx = ctxRef.current;
-    const p = playRef.current;
-    if (p && ctx && nextBeatRef.current - ctx.currentTime > 1) {
-      // a long beat (slow tempo) is already queued: restart so the new tempo is heard right away
-      startPlayback(p.mode, p.pattern);
-    }
-  };
-
-  const commitTempoDraft = () => {
-    if (tempoSkipRef.current) {
-      tempoSkipRef.current = false;
-      setTempoDraft(null);
-      return;
-    }
-    if (tempoDraft === null) return;
-    const n = parseInt(tempoDraft, 10);
-    if (!Number.isNaN(n)) changeTempo(n);
-    setTempoDraft(null);
-  };
-
-  const stopTempoHold = () => {
-    clearTimeout(tempoHoldRef.current.t);
-    clearInterval(tempoHoldRef.current.i);
-    tempoHoldRef.current = { t: null, i: null };
-  };
-  const startTempoHold = (delta) => {
-    stopTempoHold();
-    const step = () => changeTempo(settingsRef.current.tempo + delta);
-    step();
-    // hold the button to keep changing the tempo
-    tempoHoldRef.current.t = setTimeout(() => {
-      tempoHoldRef.current.i = setInterval(step, 70);
-    }, 400);
-  };
-  useEffect(() => () => stopTempoHold(), []);
-
   // All sequencer frames share the size of the longest pattern in the sequence
   const seqMaxSteps = sequence.reduce((m, p) => Math.max(m, p.code.split(' ').length), 1);
   const seqTileWidth = Math.max(84, seqMaxSteps * 16 + 28);
@@ -1662,8 +1948,6 @@ const ABELRhythmDominoes = () => {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <style>{CSS}</style>
-
-      {/* Quick-merge banner + "Merged" player (fixed at the bottom of the screen) */}
       {(mergeFirst || (playKind === 'solo' && selectedPattern && selectedPattern.parts)) && (
         <div
           style={{
@@ -1726,8 +2010,6 @@ const ABELRhythmDominoes = () => {
           )}
         </div>
       )}
-
-      {/* Floating chip while dragging a sequence frame */}
       {dragState && sequence[dragState.from] && (
         <div
           ref={dragChipRef}
@@ -1744,7 +2026,6 @@ const ABELRhythmDominoes = () => {
           {sequence[dragState.from].letter}
         </div>
       )}
-
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -1778,6 +2059,7 @@ const ABELRhythmDominoes = () => {
             <button
               onClick={() => setShowInfo(!showInfo)}
               className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
+              aria-label="Toggle info"
             >
               <Info size={24} />
             </button>
@@ -2037,6 +2319,42 @@ const ABELRhythmDominoes = () => {
                   Layer Mode (play up to 4 patterns at once, each with its own instrument)
                 </label>
               </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="notationmode"
+                  checked={notationMode}
+                  onChange={(e) => setNotationMode(e.target.checked)}
+                  className="w-4 h-4 rounded"
+                />
+                <label htmlFor="notationmode" className="text-sm cursor-pointer font-bold">
+                  Notation Mode (show patterns as musical notation)
+                </label>
+              </div>
+              {notationMode && (
+                <div className="ml-6 space-y-2">
+                  <div className="flex items-center gap-2 text-sm flex-wrap">
+                    <span className="text-gray-400">Dashes shown as:</span>
+                    <div className="flex rounded overflow-hidden border border-gray-600">
+                      <button
+                        onClick={() => setNotationGhost(false)}
+                        className={`px-3 py-1 ${!notationGhost ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                      >
+                        Rests
+                      </button>
+                      <button
+                        onClick={() => setNotationGhost(true)}
+                        className={`px-3 py-1 ${notationGhost ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                      >
+                        Ghost notes
+                      </button>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    One pattern = one beat = one quarter note. A = quarter note, B = two eighth notes, E = eighth-note triplet, L = four sixteenth notes. Any other number of subdivisions gets a bracket with its number (5, 6, 7...).
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
