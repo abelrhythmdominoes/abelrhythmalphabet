@@ -109,9 +109,6 @@
       parts: list
     });
 
-    /* =====================================================================
-       VISUAL STYLES
-       ===================================================================== */
     const CSS = `
     .abel-step{transition:transform .12s ease-out,opacity .12s ease-out,box-shadow .15s ease-out,background-color .12s ease-out;will-change:transform,opacity}
     .abel-dot{border-radius:9999px;background:var(--c);opacity:.55}
@@ -412,10 +409,7 @@
           )}
         </div>
       );
-    };
-
-    const PatternView = (props) =>
-      NOTATION.on ? <NotationView {...props} ghostNotes={NOTATION.ghost} /> : <DotsView {...props} />;
+    }
 
     const DotsView = ({ viewId, pattern, registry, size = 'md', bar = true }) => {
       const rootRef = useRef(null);
@@ -494,9 +488,9 @@
       );
     };
 
-    /* =====================================================================
-       DOMINO CARD
-       ===================================================================== */
+    const PatternView = (props) =>
+      NOTATION.on ? <NotationView {...props} ghostNotes={NOTATION.ghost} /> : <DotsView {...props} />;
+
     const DominoCard = ({
       pattern,
       onClick,
@@ -576,9 +570,6 @@
       );
     };
 
-    /* =====================================================================
-       AUDIO SYNTHESIS
-       ===================================================================== */
     const makeNoise = (ctx, dur) => {
       const buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
       const data = buf.getChannelData(0);
@@ -863,9 +854,6 @@
       return ctx.currentTime - Math.min(ctx.outputLatency || 0, 0.5);
     };
 
-    /* =====================================================================
-       MAIN COMPONENT
-       ===================================================================== */
     const ABELRhythmDominoes = () => {
       const [showInfo, setShowInfo] = useState(true);
       const [tempo, setTempo] = useState(120);
