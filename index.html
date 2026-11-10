@@ -185,6 +185,14 @@ const POP = {
 const THEME = { light: false };
 
 // Colour used to draw a pattern: the "white" patterns and the dark prime patterns stay readable in both themes
+// Colour of the pattern LETTER labels (A, B', E ...): primes are light gray in both themes,
+// and the "white" patterns turn dark gray in light mode so they stay visible on a white background
+const labelColorFor = (c) => {
+  if (c === '#2d2d2d') return '#9ca3af';
+  if (c === '#fff') return THEME.light ? '#374151' : '#fff';
+  return c;
+};
+
 const accentFor = (c) => {
   if (c === '#2d2d2d') return THEME.light ? '#6b7280' : '#9ca3af';
   if (c === '#fff') return THEME.light ? '#111827' : '#fff';
@@ -831,7 +839,7 @@ const DominoCard = ({
       }`}
       style={{ minWidth: '80px' }}
     >
-      <div className="text-xs font-bold mb-2" style={{ color: pattern.color }}>
+      <div className="text-xs font-bold mb-2" style={{ color: labelColorFor(pattern.color) }}>
         {pattern.letter}
       </div>
       <PatternView viewId={`grid:${pattern.letter}`} pattern={pattern} registry={registry} size="md" />
@@ -2841,7 +2849,7 @@ const ABELRhythmDominoes = () => {
                       >
                         ×
                       </button>
-                      <div className="text-xs font-bold mb-1" style={{ color: pattern.color }}>
+                      <div className="text-xs font-bold mb-1" style={{ color: labelColorFor(pattern.color) }}>
                         {pattern.letter}
                       </div>
                       <PatternView
@@ -2893,7 +2901,7 @@ const ABELRhythmDominoes = () => {
                           >
                             ×
                           </button>
-                          <div className="text-xs font-bold" style={{ color: pattern.color }}>
+                          <div className="text-xs font-bold" style={{ color: labelColorFor(pattern.color) }}>
                             {pattern.letter}
                           </div>
                           <div className="mt-1">
