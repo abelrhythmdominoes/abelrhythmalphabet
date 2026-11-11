@@ -2,9 +2,26 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>ABEL Rhythm Alphabet</title>
 <meta name="theme-color" content="#111827" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" type="image/png" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="ABEL" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="description" content="ABEL Rhythm Alphabet – a metronome and sequencer." />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="ABEL Rhythm Alphabet" />
+<meta property="og:description" content="ABEL Rhythm Alphabet – a metronome and sequencer." />
+<meta property="og:url" content="https://rhythmalphabet.pages.dev/" />
+<meta property="og:image" content="https://rhythmalphabet.pages.dev/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <style>
   html, body, #root { min-height: 100%; margin: 0; }
@@ -74,6 +91,7 @@ const makeIcon = (name) => {
 };
 const Play = makeIcon('Play');
 const Pause = makeIcon('Pause');
+const Shuffle = makeIcon('Shuffle');
 const Info = makeIcon('Info');
 const Volume2 = makeIcon('Volume2');
 
@@ -1780,6 +1798,24 @@ const ABELRhythmDominoes = () => {
     setSequence([]);
   };
 
+  const shuffleSequence = () => {
+    if (sequence.length < 2) return;
+    const signature = (arr) => arr.map((p) => p.letter + ':' + p.binary).join('|');
+    const original = signature(sequence);
+    const canChange = new Set(sequence.map((p) => p.letter + ':' + p.binary)).size > 1;
+    let next = sequence;
+    // Fisher-Yates; retry so the order really changes whenever that is possible
+    for (let attempt = 0; attempt < 10; attempt++) {
+      next = sequence.slice();
+      for (let i = next.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [next[i], next[j]] = [next[j], next[i]];
+      }
+      if (!canChange || signature(next) !== original) break;
+    }
+    setSequence(next);
+  };
+
   const removeFromSequence = (index) => {
     const next = sequence.filter((_, i) => i !== index);
     setSequence(next);
@@ -2762,7 +2798,7 @@ const ABELRhythmDominoes = () => {
           {/* Sequence Builder */}
           {isSequenceMode && (
             <div className="bg-purple-900/30 border-2 border-purple-500 rounded-lg p-4 mt-4">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                 <h3 className="text-lg font-bold flex items-center gap-2">
                   Rhythm Sequence Builder
                   <span
@@ -2773,7 +2809,7 @@ const ABELRhythmDominoes = () => {
                     {sequence.length}
                   </span>
                 </h3>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button
                     onClick={playSequence}
                     disabled={sequence.length === 0}
@@ -2785,6 +2821,19 @@ const ABELRhythmDominoes = () => {
                   >
                     {playKind === 'sequence' ? <Pause size={16} /> : <Play size={16} />}
                     {playKind === 'sequence' ? 'Stop' : 'Play'} Sequence
+                  </button>
+                  <button
+                    onClick={shuffleSequence}
+                    disabled={sequence.length < 2}
+                    title="Randomly shuffle the order of the patterns"
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                      sequence.length < 2
+                        ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                        : 'bg-indigo-600 hover:bg-indigo-700'
+                    }`}
+                  >
+                    <Shuffle size={16} />
+                    Shuffle
                   </button>
                   <button
                     onClick={clearSequence}
@@ -3107,6 +3156,45 @@ const ABELRhythmDominoes = () => {
 
 /* ---- Mount ---- */
 ReactDOM.createRoot(document.getElementById('root')).render(<ABELRhythmDominoes />);
+</script>
+
+<style>
+  #install-bar{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:9999;display:none;align-items:center;gap:10px;background:#1f2937;color:#f9fafb;border:1px solid #374151;border-radius:12px;padding:10px 14px;font:14px system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.4);max-width:480px;margin:0 auto}
+  #install-bar button{border:0;border-radius:8px;padding:8px 12px;font:600 14px system-ui,sans-serif;cursor:pointer}
+  #install-go{background:#2563eb;color:#fff}
+  #install-x{background:transparent;color:#9ca3af}
+</style>
+<div id="install-bar" role="dialog" aria-label="Install app">
+  <span id="install-msg" style="flex:1">Install ABEL for quick, offline access.</span>
+  <button id="install-go">Install</button>
+  <button id="install-x" aria-label="Dismiss">✕</button>
+</div>
+<script>
+(function(){
+  var bar=document.getElementById('install-bar'), go=document.getElementById('install-go'),
+      msg=document.getElementById('install-msg'), x=document.getElementById('install-x'), deferred=null;
+  function dismissed(){try{return localStorage.getItem('abel-install-dismissed')==='1'}catch(e){return false}}
+  function standalone(){return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true}
+  x.onclick=function(){bar.style.display='none';try{localStorage.setItem('abel-install-dismissed','1')}catch(e){}};
+  if(standalone()||dismissed())return;
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault();deferred=e;bar.style.display='flex';
+  });
+  go.onclick=function(){
+    if(!deferred)return;deferred.prompt();
+    deferred.userChoice.finally(function(){deferred=null;bar.style.display='none'});
+  };
+  window.addEventListener('appinstalled',function(){bar.style.display='none'});
+  // iOS Safari has no install prompt: show manual steps.
+  var ua=navigator.userAgent, ios=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  if(ios&&/Safari/.test(ua)&&!/CriOS|FxiOS/.test(ua)){
+    msg.innerHTML='To install: tap <b>Share</b> <span aria-hidden="true">⬆︎</span>, then <b>Add to Home Screen</b>.';
+    go.style.display='none';bar.style.display='flex';
+  }
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})});
+  }
+})();
 </script>
 </body>
 </html>
