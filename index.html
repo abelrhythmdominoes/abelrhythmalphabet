@@ -1092,6 +1092,7 @@ const renderSamples = async (ctx) => {
       const off = new OAC(1, Math.ceil(ctx.sampleRate * 0.5), ctx.sampleRate);
       INSTRUMENT_FN[key](off, 0, 1, off.destination);
       out[key] = await off.startRendering();
+      await new Promise((r) => setTimeout(r, 0)); // let taps and drawing breathe between instruments
     }
   } catch (e) {
     return null; // fall back to live synthesis
@@ -1280,6 +1281,8 @@ const ABELRhythmDominoes = () => {
   const segmentsRef = useRef([]);
   const playRef = useRef(null);
   const samplesRef = useRef(null);
+  const samplesPromiseRef = useRef(null);
+  const startTokenRef = useRef(null);
   const voicesRef = useRef(new Map());
 
   // Live values read by the audio scheduler / animator (no stale closures)
@@ -1307,17 +1310,51 @@ const ABELRhythmDominoes = () => {
   const beatLitRef = useRef({ segId: null });
 
   useEffect(() => {
-    ctxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    const AC = window.AudioContext || window.webkitAudioContext;
+    try {
+      ctxRef.current = new AC({ latencyHint: 'interactive' });
+    } catch (e) {
+      ctxRef.current = new AC();
+    }
     const createdCtx = ctxRef.current;
-    renderSamples(createdCtx)
+    samplesPromiseRef.current = renderSamples(createdCtx)
       .then((s) => {
         if (ctxRef.current === createdCtx) samplesRef.current = s;
       })
       .catch(() => {});
+
+    // Keep the audio engine awake. Android suspends it at start-up and again after the app has been
+    // idle or in the background, which delays the first sound and the animation (they share one clock).
+    // On every touch (before the tap on a pattern is even finished) we make sure the context is
+    // running and play one silent sample so the audio output hardware is already awake.
+    const unlockEvents = ['pointerdown', 'touchstart', 'keydown'];
+    let lastWake = 0;
+    const unlock = () => {
+      try {
+        if (createdCtx.state !== 'running') createdCtx.resume();
+        const nowMs = performance.now();
+        if (nowMs - lastWake > 2000) {
+          lastWake = nowMs;
+          const silent = createdCtx.createBufferSource();
+          silent.buffer = createdCtx.createBuffer(1, 1, createdCtx.sampleRate);
+          silent.connect(createdCtx.destination);
+          silent.start(0);
+        }
+      } catch (e) {
+        /* ignore */
+      }
+    };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') unlock();
+    };
+    unlockEvents.forEach((t) => document.addEventListener(t, unlock, { capture: true, passive: true }));
+    document.addEventListener('visibilitychange', onVisible);
     beatElsRef.current = beatsContainerRef.current
       ? Array.from(beatsContainerRef.current.querySelectorAll('[data-beat]'))
       : [];
     return () => {
+      unlockEvents.forEach((t) => document.removeEventListener(t, unlock, true));
+      document.removeEventListener('visibilitychange', onVisible);
       if (schedulerIdRef.current) clearInterval(schedulerIdRef.current);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (ctxRef.current) {
@@ -1551,6 +1588,7 @@ const ABELRhythmDominoes = () => {
   };
 
   const stopEngine = () => {
+    startTokenRef.current = null; // cancel a start that is still waiting for audio to be ready
     if (schedulerIdRef.current) {
       clearInterval(schedulerIdRef.current);
       schedulerIdRef.current = null;
@@ -1590,10 +1628,29 @@ const ABELRhythmDominoes = () => {
   const startPlayback = (mode, pattern) => {
     const ctx = ctxRef.current;
     if (!ctx) return;
-    if (ctx.state === 'suspended') ctx.resume();
 
     stopEngine();
 
+    // Only the very first start can be "not ready yet": the audio engine may still be waking up or
+    // the instrument samples still rendering. Wait for them (max 500 ms) so the first hits already
+    // sound exactly like every other hit and are timed from a running clock.
+    const waits = [];
+    if (ctx.state === 'suspended') waits.push(ctx.resume().catch(() => {}));
+    if (!samplesRef.current && samplesPromiseRef.current) waits.push(samplesPromiseRef.current);
+    if (waits.length) {
+      const token = {};
+      startTokenRef.current = token;
+      Promise.race([Promise.all(waits), new Promise((r) => setTimeout(r, 500))]).then(() => {
+        if (startTokenRef.current !== token || ctxRef.current !== ctx) return; // stopped meanwhile
+        startTokenRef.current = null;
+        beginPlayback(ctx, mode, pattern);
+      });
+      return;
+    }
+    beginPlayback(ctx, mode, pattern);
+  };
+
+  const beginPlayback = (ctx, mode, pattern) => {
     const master = ctx.createGain();
     master.gain.value = mode === 'layers' ? 0.7 : 1; // headroom when several instruments play together
     master.connect(ctx.destination);
