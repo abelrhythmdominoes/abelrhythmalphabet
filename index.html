@@ -179,6 +179,9 @@ const CSS = `
 .abel-dash[data-state="rest"]{opacity:.95;background:#e5e7eb;transform:scaleY(2.4);box-shadow:0 0 6px rgba(229,231,235,.55)}
 .abel-dash[data-state="ghost"]{opacity:.95;transform:scaleY(2.6);box-shadow:0 0 7px var(--c)}
 .abel-tile[data-active="1"]{box-shadow:0 0 0 2px rgba(255,255,255,.35),0 0 18px rgba(255,255,255,.15)}
+.abel-tile[data-active="1"][data-downbeat="1"]{border-color:#4ade80;box-shadow:0 0 0 2px #4ade80,0 0 14px rgba(74,222,128,.35)}
+.abel-panel[data-active="1"][data-downbeat="1"]{box-shadow:0 0 0 2px #4ade80,0 0 14px rgba(74,222,128,.35)}
+.abel-tile[data-downbeat="1"] .abel-bar>div,.abel-panel[data-downbeat="1"] .abel-bar>div{background:#4ade80}
 .abel-bar{height:2px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;margin-top:6px}
 .abel-bar>div{height:100%;width:100%;background:var(--c);transform-origin:left center;transform:scaleX(0)}
 .abel-beat{width:12px;height:12px;border-radius:9999px;background:#374151;transition:transform .12s ease-out,box-shadow .15s ease-out,background-color .12s ease-out}
@@ -261,6 +264,9 @@ const LIGHT_CSS = String.raw`
 .abel-light [style*="background: rgba(255, 255, 255, 0.22)"]{background:rgba(0,0,0,.25) !important}
 .abel-light .abel-dash[data-state="rest"]{background:#374151;box-shadow:0 0 6px rgba(55,65,81,.5)}
 .abel-light .abel-tile[data-active="1"]{box-shadow:0 0 0 2px rgba(0,0,0,.25),0 0 18px rgba(0,0,0,.12)}
+.abel-light .abel-tile[data-active="1"][data-downbeat="1"]{border-color:#16a34a;box-shadow:0 0 0 2px #16a34a,0 0 12px rgba(22,163,74,.3)}
+.abel-light .abel-panel[data-active="1"][data-downbeat="1"]{box-shadow:0 0 0 2px #16a34a,0 0 12px rgba(22,163,74,.3)}
+.abel-light .abel-tile[data-downbeat="1"] .abel-bar>div,.abel-light .abel-panel[data-downbeat="1"] .abel-bar>div{background:#16a34a}
 .abel-light .abel-bar{background:rgba(0,0,0,.08)}
 .abel-light .abel-beat:not([data-state]){background:#d1d5db}
 .abel-light .abel-n-line{stroke:#6b7280}
@@ -296,10 +302,46 @@ const setStepState = (entry, i, state, popMs = 0) => {
   }
 };
 
-const setTileActive = (entry, on) => {
+// Downbeat flash, fired ONCE when the first beat of a measure starts (short, sharp and subtle).
+// `newBeat` is false for the later steps of the same beat (subdivisions), which must not
+// retrigger or cancel the flash.
+const PULSE = {
+  down: { attr: 'data-downbeat', scale: 1.035, bright: 1.22, hold: 140, ms: 170 }
+};
+const setTileActive = (entry, on, level = null, newBeat = true) => {
   if (!entry || !entry.tile) return;
-  if (on) entry.tile.setAttribute('data-active', '1');
-  else entry.tile.removeAttribute('data-active');
+  const t = entry.tile;
+  const clear = () => {
+    t.removeAttribute('data-downbeat');
+  };
+  if (!on) {
+    t.removeAttribute('data-active');
+    clear();
+    clearTimeout(t._dbTimer);
+    return;
+  }
+  t.setAttribute('data-active', '1');
+  if (!newBeat) return;
+  clearTimeout(t._dbTimer);
+  clear();
+  const P = PULSE[level];
+  if (!P) return;
+  t.setAttribute(P.attr, '1');
+  t._dbTimer = setTimeout(clear, P.hold);
+  const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduce && t.animate) {
+    try {
+      t.animate(
+        [
+          { transform: `scale(${P.scale})`, filter: `brightness(${P.bright})` },
+          { transform: 'scale(1)', filter: 'brightness(1)' }
+        ],
+        { duration: P.ms, easing: 'cubic-bezier(.1,.9,.2,1)' }
+      );
+    } catch (e) {
+      /* ignore */
+    }
+  }
 };
 
 /* =====================================================================
@@ -415,7 +457,10 @@ function NotationView({ viewId, pattern, registry, size = 'md', bar = true, ghos
       if (registry.current.get(viewId) === entry) registry.current.delete(viewId);
       entry.steps.forEach((el) => el.removeAttribute('data-state'));
       if (entry.bar) entry.bar.style.transform = 'scaleX(0)';
-      if (entry.tile) entry.tile.removeAttribute('data-active');
+      if (entry.tile) {
+        entry.tile.removeAttribute('data-active');
+        entry.tile.removeAttribute('data-downbeat');
+      }
     };
   }, [viewId, pattern, registry, ghostNotes]);
 
@@ -670,7 +715,10 @@ function PieView({ viewId, pattern, registry, size = 'md', bar = true }) {
       if (registry.current.get(viewId) === entry) registry.current.delete(viewId);
       entry.steps.forEach((el) => el.removeAttribute('data-state'));
       progress(0);
-      if (entry.tile) entry.tile.removeAttribute('data-active');
+      if (entry.tile) {
+        entry.tile.removeAttribute('data-active');
+        entry.tile.removeAttribute('data-downbeat');
+      }
     };
   }, [viewId, pattern, registry, bar]);
 
@@ -744,7 +792,10 @@ const DotsView = ({ viewId, pattern, registry, size = 'md', bar = true }) => {
       if (registry.current.get(viewId) === entry) registry.current.delete(viewId);
       entry.steps.forEach((el) => el.removeAttribute('data-state'));
       if (entry.bar) entry.bar.style.transform = 'scaleX(0)';
-      if (entry.tile) entry.tile.removeAttribute('data-active');
+      if (entry.tile) {
+        entry.tile.removeAttribute('data-active');
+        entry.tile.removeAttribute('data-downbeat');
+      }
     };
   }, [viewId, pattern, registry]);
 
@@ -1409,7 +1460,8 @@ const ABELRhythmDominoes = () => {
             if (prev && prev.entry === entry) setStepState(entry, prev.idx, 'idle');
             const state = track.sound[step] ? 'hit' : seg.ghost ? 'ghost' : 'rest';
             setStepState(entry, local, state, popMs);
-            setTileActive(entry, true);
+            const newBeat = !prev || prev.entry !== entry || prev.segId !== seg.id;
+            setTileActive(entry, true, seg.beatPos === 0 ? 'down' : null, newBeat);
             lit.set(tg.viewId, { entry, idx: local, segId: seg.id });
           }
           if (entry.bar && tg.count === track.n) {
@@ -2301,12 +2353,6 @@ const ABELRhythmDominoes = () => {
   const seqPreset = SEQ_SIZES[seqSize] || SEQ_SIZES.M;
   const seqTileWidth = Math.max(seqPreset.min, seqMaxSteps * seqPreset.perStep + seqPreset.pad);
 
-  // Frames are grouped into measures: one frame = one beat, so a bar holds `beatsPerBar` frames
-  const seqBars = [];
-  for (let i = 0; i < sequence.length; i += beatsPerBar) {
-    seqBars.push(Array.from({ length: Math.min(beatsPerBar, sequence.length - i) }, (_, k) => i + k));
-  }
-  const seqLastBarComplete = sequence.length > 0 && sequence.length % beatsPerBar === 0;
 
   const infoPattern = playKind === 'solo' ? selectedPattern : playKind === 'fused' ? fusedPattern : null;
 
@@ -2978,88 +3024,64 @@ const ABELRhythmDominoes = () => {
                   Click on patterns below to add them to your sequence
                 </div>
               ) : (
-                <div className="flex flex-wrap gap-x-2 gap-y-4 items-start">
-                  {seqBars.map((bar, b) => (
+                <div className="flex flex-wrap gap-2">
+                  {sequence.map((pattern, index) => (
                     <div
-                      key={b}
-                      data-bar-group
-                      className="flex flex-col"
+                      key={index}
+                      ref={(el) => {
+                        seqTileRefs.current[index] = el;
+                      }}
+                      data-tile
+                      className="abel-tile relative group bg-gray-700 rounded-lg p-3 border-2 border-purple-400"
+                      onPointerDown={(e) => onTilePointerDown(e, index)}
+                      onContextMenu={(e) => e.preventDefault()}
                       style={{
+                        width: seqTileWidth,
                         maxWidth: '100%',
-                        paddingLeft: b > 0 ? 8 : 0,
-                        paddingRight: b === seqBars.length - 1 && seqLastBarComplete ? 8 : 0,
-                        borderLeft: b > 0 ? '2px solid rgba(192,132,252,.6)' : 'none',
-                        borderRight:
-                          b === seqBars.length - 1 && seqLastBarComplete ? '4px double rgba(192,132,252,.6)' : 'none'
+                        flexShrink: 0,
+                        opacity: dragState && dragState.from === index ? 0.35 : 1,
+                        transform: dragState && dragState.from === index ? 'scale(0.96)' : 'none',
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        WebkitTouchCallout: 'none',
+                        transition: 'opacity .15s, transform .15s'
                       }}
                     >
-                      <div className="text-xs font-mono text-gray-400 mb-1 select-none" aria-hidden="true">
-                        {b + 1}
+                      {dropSide(index) && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            bottom: 0,
+                            [dropSide(index) === 'after' ? 'right' : 'left']: -6,
+                            width: 3,
+                            borderRadius: 2,
+                            background: '#fff',
+                            boxShadow: '0 0 8px #c084fc',
+                            zIndex: 20
+                          }}
+                        />
+                      )}
+                      <button
+                        onClick={() => removeFromSequence(index)}
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                      >
+                        ×
+                      </button>
+                      <div className="text-xs font-bold mb-1" style={{ color: labelColorFor(pattern.color) }}>
+                        {pattern.letter}
                       </div>
-                      <div className="flex flex-wrap gap-2" style={{ maxWidth: '100%' }}>
-                        {bar.map((index) => {
-                          const pattern = sequence[index];
-                          return (
-                          <div
-                            key={index}
-                            ref={(el) => {
-                              seqTileRefs.current[index] = el;
-                            }}
-                            data-tile
-                            className="abel-tile relative group bg-gray-700 rounded-lg p-3 border-2 border-purple-400"
-                            onPointerDown={(e) => onTilePointerDown(e, index)}
-                            onContextMenu={(e) => e.preventDefault()}
-                            style={{
-                              width: seqTileWidth,
-                              maxWidth: '100%',
-                              flexShrink: 0,
-                              opacity: dragState && dragState.from === index ? 0.35 : 1,
-                              transform: dragState && dragState.from === index ? 'scale(0.96)' : 'none',
-                              userSelect: 'none',
-                              WebkitUserSelect: 'none',
-                              WebkitTouchCallout: 'none',
-                              transition: 'opacity .15s, transform .15s'
-                            }}
-                          >
-                            {dropSide(index) && (
-                              <div
-                                style={{
-                                  position: 'absolute',
-                                  top: 0,
-                                  bottom: 0,
-                                  [dropSide(index) === 'after' ? 'right' : 'left']: -6,
-                                  width: 3,
-                                  borderRadius: 2,
-                                  background: '#fff',
-                                  boxShadow: '0 0 8px #c084fc',
-                                  zIndex: 20
-                                }}
-                              />
-                            )}
-                            <button
-                              onClick={() => removeFromSequence(index)}
-                              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                            >
-                              ×
-                            </button>
-                            <div className="text-xs font-bold mb-1" style={{ color: labelColorFor(pattern.color) }}>
-                              {pattern.letter}
-                            </div>
-                            <PatternView
-                              viewId={`seq:${index}`}
-                              pattern={pattern}
-                              registry={registryRef}
-                              size={seqPreset.view}
-                            />
-                            <div
-                              className="text-xs text-gray-400 mt-1 font-mono"
-                              style={{ visibility: pattern.binary.length > 4 ? 'visible' : 'hidden' }}
-                            >
-                              {pattern.binary.length} sub.
-                            </div>
-                          </div>
-                          );
-                        })}
+                      <PatternView
+                        viewId={`seq:${index}`}
+                        pattern={pattern}
+                        registry={registryRef}
+                        size={seqPreset.view}
+                      />
+                      <div
+                        className="text-xs text-gray-400 mt-1 font-mono"
+                        style={{ visibility: pattern.binary.length > 4 ? 'visible' : 'hidden' }}
+                      >
+                        {pattern.binary.length} sub.
                       </div>
                     </div>
                   ))}
@@ -3142,7 +3164,7 @@ const ABELRhythmDominoes = () => {
                       </div>
 
                       {/* Animated visualisation of the fused pattern */}
-                      <div className="mb-4 p-3 bg-gray-900/50 rounded overflow-x-auto">
+                      <div data-tile className="abel-panel mb-4 p-3 bg-gray-900/50 rounded overflow-x-auto">
                         <div style={{ minWidth: Math.max(160, fusedPattern.code.split(' ').length * 30) }}>
                           <PatternView
                             viewId="fused-result"
@@ -3282,7 +3304,7 @@ const ABELRhythmDominoes = () => {
               </div>
             </div>
 
-            <div className="mt-4 p-3 bg-gray-900/50 rounded overflow-x-auto">
+            <div data-tile className="abel-panel mt-4 p-3 bg-gray-900/50 rounded overflow-x-auto">
               <div style={{ minWidth: Math.max(160, infoPattern.code.split(' ').length * 30) }}>
                 <PatternView viewId="info" pattern={infoPattern} registry={registryRef} size="lg" />
               </div>
