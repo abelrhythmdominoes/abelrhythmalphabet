@@ -179,9 +179,6 @@ const CSS = `
 .abel-dash[data-state="rest"]{opacity:.95;background:#e5e7eb;transform:scaleY(2.4);box-shadow:0 0 6px rgba(229,231,235,.55)}
 .abel-dash[data-state="ghost"]{opacity:.95;transform:scaleY(2.6);box-shadow:0 0 7px var(--c)}
 .abel-tile[data-active="1"]{box-shadow:0 0 0 2px rgba(255,255,255,.35),0 0 18px rgba(255,255,255,.15)}
-.abel-tile[data-active="1"][data-downbeat="1"]{border-color:#4ade80;box-shadow:0 0 0 2px #4ade80,0 0 14px rgba(74,222,128,.35)}
-.abel-panel[data-active="1"][data-downbeat="1"]{box-shadow:0 0 0 2px #4ade80,0 0 14px rgba(74,222,128,.35)}
-.abel-tile[data-downbeat="1"] .abel-bar>div,.abel-panel[data-downbeat="1"] .abel-bar>div{background:#4ade80}
 .abel-bar{height:2px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;margin-top:6px}
 .abel-bar>div{height:100%;width:100%;background:var(--c);transform-origin:left center;transform:scaleX(0)}
 .abel-beat{width:12px;height:12px;border-radius:9999px;background:#374151;transition:transform .12s ease-out,box-shadow .15s ease-out,background-color .12s ease-out}
@@ -194,14 +191,6 @@ const DIMS = {
   sm: { dot: 8, dash: 10, dashH: 2, h: 18 },
   md: { dot: 11, dash: 14, dashH: 2, h: 24 },
   lg: { dot: 16, dash: 24, dashH: 3, h: 38 }
-};
-
-// Frame sizes of the sequencer: which view size to draw, and how wide a frame is
-// (width = max(min, longest pattern in steps * perStep + pad))
-const SEQ_SIZES = {
-  S: { view: 'sm', perStep: 16, pad: 28, min: 84, label: 'Small' },
-  M: { view: 'md', perStep: 22, pad: 32, min: 112, label: 'Medium' },
-  L: { view: 'lg', perStep: 30, pad: 36, min: 156, label: 'Large' }
 };
 
 const POP = {
@@ -264,9 +253,6 @@ const LIGHT_CSS = String.raw`
 .abel-light [style*="background: rgba(255, 255, 255, 0.22)"]{background:rgba(0,0,0,.25) !important}
 .abel-light .abel-dash[data-state="rest"]{background:#374151;box-shadow:0 0 6px rgba(55,65,81,.5)}
 .abel-light .abel-tile[data-active="1"]{box-shadow:0 0 0 2px rgba(0,0,0,.25),0 0 18px rgba(0,0,0,.12)}
-.abel-light .abel-tile[data-active="1"][data-downbeat="1"]{border-color:#16a34a;box-shadow:0 0 0 2px #16a34a,0 0 12px rgba(22,163,74,.3)}
-.abel-light .abel-panel[data-active="1"][data-downbeat="1"]{box-shadow:0 0 0 2px #16a34a,0 0 12px rgba(22,163,74,.3)}
-.abel-light .abel-tile[data-downbeat="1"] .abel-bar>div,.abel-light .abel-panel[data-downbeat="1"] .abel-bar>div{background:#16a34a}
 .abel-light .abel-bar{background:rgba(0,0,0,.08)}
 .abel-light .abel-beat:not([data-state]){background:#d1d5db}
 .abel-light .abel-n-line{stroke:#6b7280}
@@ -302,46 +288,10 @@ const setStepState = (entry, i, state, popMs = 0) => {
   }
 };
 
-// Downbeat flash, fired ONCE when the first beat of a measure starts (short, sharp and subtle).
-// `newBeat` is false for the later steps of the same beat (subdivisions), which must not
-// retrigger or cancel the flash.
-const PULSE = {
-  down: { attr: 'data-downbeat', scale: 1.035, bright: 1.22, hold: 140, ms: 170 }
-};
-const setTileActive = (entry, on, level = null, newBeat = true) => {
+const setTileActive = (entry, on) => {
   if (!entry || !entry.tile) return;
-  const t = entry.tile;
-  const clear = () => {
-    t.removeAttribute('data-downbeat');
-  };
-  if (!on) {
-    t.removeAttribute('data-active');
-    clear();
-    clearTimeout(t._dbTimer);
-    return;
-  }
-  t.setAttribute('data-active', '1');
-  if (!newBeat) return;
-  clearTimeout(t._dbTimer);
-  clear();
-  const P = PULSE[level];
-  if (!P) return;
-  t.setAttribute(P.attr, '1');
-  t._dbTimer = setTimeout(clear, P.hold);
-  const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!reduce && t.animate) {
-    try {
-      t.animate(
-        [
-          { transform: `scale(${P.scale})`, filter: `brightness(${P.bright})` },
-          { transform: 'scale(1)', filter: 'brightness(1)' }
-        ],
-        { duration: P.ms, easing: 'cubic-bezier(.1,.9,.2,1)' }
-      );
-    } catch (e) {
-      /* ignore */
-    }
-  }
+  if (on) entry.tile.setAttribute('data-active', '1');
+  else entry.tile.removeAttribute('data-active');
 };
 
 /* =====================================================================
@@ -457,10 +407,7 @@ function NotationView({ viewId, pattern, registry, size = 'md', bar = true, ghos
       if (registry.current.get(viewId) === entry) registry.current.delete(viewId);
       entry.steps.forEach((el) => el.removeAttribute('data-state'));
       if (entry.bar) entry.bar.style.transform = 'scaleX(0)';
-      if (entry.tile) {
-        entry.tile.removeAttribute('data-active');
-        entry.tile.removeAttribute('data-downbeat');
-      }
+      if (entry.tile) entry.tile.removeAttribute('data-active');
     };
   }, [viewId, pattern, registry, ghostNotes]);
 
@@ -715,10 +662,7 @@ function PieView({ viewId, pattern, registry, size = 'md', bar = true }) {
       if (registry.current.get(viewId) === entry) registry.current.delete(viewId);
       entry.steps.forEach((el) => el.removeAttribute('data-state'));
       progress(0);
-      if (entry.tile) {
-        entry.tile.removeAttribute('data-active');
-        entry.tile.removeAttribute('data-downbeat');
-      }
+      if (entry.tile) entry.tile.removeAttribute('data-active');
     };
   }, [viewId, pattern, registry, bar]);
 
@@ -792,10 +736,7 @@ const DotsView = ({ viewId, pattern, registry, size = 'md', bar = true }) => {
       if (registry.current.get(viewId) === entry) registry.current.delete(viewId);
       entry.steps.forEach((el) => el.removeAttribute('data-state'));
       if (entry.bar) entry.bar.style.transform = 'scaleX(0)';
-      if (entry.tile) {
-        entry.tile.removeAttribute('data-active');
-        entry.tile.removeAttribute('data-downbeat');
-      }
+      if (entry.tile) entry.tile.removeAttribute('data-active');
     };
   }, [viewId, pattern, registry]);
 
@@ -1313,7 +1254,6 @@ const ABELRhythmDominoes = () => {
   const [playKind, setPlayKind] = useState(null); // null | 'solo' | 'sequence' | 'fused' | 'layers'
   const [sequence, setSequence] = useState([]);
   const [isSequenceMode, setIsSequenceMode] = useState(false);
-  const [seqSize, setSeqSize] = useState('M'); // size of the frames in the sequencer: 'S' | 'M' | 'L'
   const [isFusionMode, setIsFusionMode] = useState(false);
   const [isLayerMode, setIsLayerMode] = useState(false);
   const [fusionPatterns, setFusionPatterns] = useState([]);
@@ -1460,8 +1400,7 @@ const ABELRhythmDominoes = () => {
             if (prev && prev.entry === entry) setStepState(entry, prev.idx, 'idle');
             const state = track.sound[step] ? 'hit' : seg.ghost ? 'ghost' : 'rest';
             setStepState(entry, local, state, popMs);
-            const newBeat = !prev || prev.entry !== entry || prev.segId !== seg.id;
-            setTileActive(entry, true, seg.beatPos === 0 ? 'down' : null, newBeat);
+            setTileActive(entry, true);
             lit.set(tg.viewId, { entry, idx: local, segId: seg.id });
           }
           if (entry.bar && tg.count === track.n) {
@@ -1701,35 +1640,6 @@ const ABELRhythmDominoes = () => {
   const [lightTheme, setLightTheme] = useState(false); // the dark theme is the default
   THEME.light = lightTheme;
 
-  // restore the saved frame size of the sequencer
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        if (window.storage) {
-          const r = await window.storage.get('abel:seqsize');
-          if (!cancelled && r && SEQ_SIZES[r.value]) setSeqSize(r.value);
-        }
-      } catch (e) {
-        /* no saved size: keep the default */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const chooseSeqSize = (key) => {
-    setSeqSize(key);
-    try {
-      if (window.storage) {
-        Promise.resolve(window.storage.set('abel:seqsize', key)).catch(() => {});
-      }
-    } catch (e) {
-      /* size could not be saved: ignore */
-    }
-  };
-
   // restore the saved theme (if the environment can store it); dark stays the default
   useEffect(() => {
     let cancelled = false;
@@ -1888,68 +1798,23 @@ const ABELRhythmDominoes = () => {
     setSequence([]);
   };
 
-  // Frames glide from their old slot to their new one after a shuffle (FLIP technique)
-  const shuffleFlipRef = useRef(null); // { rects: [...old positions], order: [...old index of each new slot] }
-
   const shuffleSequence = () => {
     if (sequence.length < 2) return;
-    const n = sequence.length;
-    const key = (p) => p.letter + ':' + p.binary;
-    const canChange = new Set(sequence.map(key)).size > 1;
-    const same = (order) => order.every((from, i) => key(sequence[from]) === key(sequence[i]));
-    let order = sequence.map((_, i) => i);
-    // Fisher-Yates on the positions; retry so the order really changes whenever that is possible
+    const signature = (arr) => arr.map((p) => p.letter + ':' + p.binary).join('|');
+    const original = signature(sequence);
+    const canChange = new Set(sequence.map((p) => p.letter + ':' + p.binary)).size > 1;
+    let next = sequence;
+    // Fisher-Yates; retry so the order really changes whenever that is possible
     for (let attempt = 0; attempt < 10; attempt++) {
-      order = sequence.map((_, i) => i);
-      for (let i = n - 1; i > 0; i--) {
+      next = sequence.slice();
+      for (let i = next.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [order[i], order[j]] = [order[j], order[i]];
+        [next[i], next[j]] = [next[j], next[i]];
       }
-      if (!canChange || !same(order)) break;
+      if (!canChange || signature(next) !== original) break;
     }
-
-    // remember where every frame is now, so it can slide to its new place after the re-render
-    const reduceMotion =
-      typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    shuffleFlipRef.current = reduceMotion
-      ? null
-      : {
-          order,
-          rects: seqTileRefs.current.slice(0, n).map((el) => (el ? el.getBoundingClientRect() : null))
-        };
-
-    if (hapticsOnRef.current) safeVibrate([14, 45, 14]); // short double pulse
-    setSequence(order.map((from) => sequence[from]));
+    setSequence(next);
   };
-
-  React.useLayoutEffect(() => {
-    const flip = shuffleFlipRef.current;
-    if (!flip) return;
-    shuffleFlipRef.current = null;
-    flip.order.forEach((from, i) => {
-      const el = seqTileRefs.current[i];
-      const old = flip.rects[from];
-      if (!el || !old || !el.animate) return;
-      const now = el.getBoundingClientRect();
-      const dx = old.left - now.left;
-      const dy = old.top - now.top;
-      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
-      el.style.zIndex = '5'; // keep moving frames above their neighbours
-      const a = el.animate(
-        [
-          { transform: `translate(${dx}px, ${dy}px) scale(1)` },
-          { transform: `translate(${dx / 2}px, ${dy / 2}px) scale(1.06)`, offset: 0.5 },
-          { transform: 'translate(0, 0) scale(1)' }
-        ],
-        { duration: 380, easing: 'cubic-bezier(.22,.9,.28,1)' }
-      );
-      const done = () => {
-        el.style.zIndex = '';
-      };
-      a.onfinish = done;
-      a.oncancel = done;
-    });
-  }, [sequence]);
 
   const removeFromSequence = (index) => {
     const next = sequence.filter((_, i) => i !== index);
@@ -2350,9 +2215,7 @@ const ABELRhythmDominoes = () => {
 
   // All sequencer frames share the size of the longest pattern in the sequence
   const seqMaxSteps = sequence.reduce((m, p) => Math.max(m, p.code.split(' ').length), 1);
-  const seqPreset = SEQ_SIZES[seqSize] || SEQ_SIZES.M;
-  const seqTileWidth = Math.max(seqPreset.min, seqMaxSteps * seqPreset.perStep + seqPreset.pad);
-
+  const seqTileWidth = Math.max(84, seqMaxSteps * 16 + 28);
 
   const infoPattern = playKind === 'solo' ? selectedPattern : playKind === 'fused' ? fusedPattern : null;
 
@@ -2961,25 +2824,6 @@ const ABELRhythmDominoes = () => {
                   </span>
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  <div
-                    role="group"
-                    aria-label="Frame size"
-                    className="flex rounded-lg overflow-hidden border border-purple-500/60"
-                  >
-                    {Object.keys(SEQ_SIZES).map((k) => (
-                      <button
-                        key={k}
-                        onClick={() => chooseSeqSize(k)}
-                        aria-pressed={seqSize === k}
-                        title={`${SEQ_SIZES[k].label} frames`}
-                        className={`px-3 py-2 font-bold transition-colors ${
-                          seqSize === k ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
-                        }`}
-                      >
-                        {k}
-                      </button>
-                    ))}
-                  </div>
                   <button
                     onClick={playSequence}
                     disabled={sequence.length === 0}
@@ -3075,7 +2919,7 @@ const ABELRhythmDominoes = () => {
                         viewId={`seq:${index}`}
                         pattern={pattern}
                         registry={registryRef}
-                        size={seqPreset.view}
+                        size="sm"
                       />
                       <div
                         className="text-xs text-gray-400 mt-1 font-mono"
@@ -3164,7 +3008,7 @@ const ABELRhythmDominoes = () => {
                       </div>
 
                       {/* Animated visualisation of the fused pattern */}
-                      <div data-tile className="abel-panel mb-4 p-3 bg-gray-900/50 rounded overflow-x-auto">
+                      <div className="mb-4 p-3 bg-gray-900/50 rounded overflow-x-auto">
                         <div style={{ minWidth: Math.max(160, fusedPattern.code.split(' ').length * 30) }}>
                           <PatternView
                             viewId="fused-result"
@@ -3304,7 +3148,7 @@ const ABELRhythmDominoes = () => {
               </div>
             </div>
 
-            <div data-tile className="abel-panel mt-4 p-3 bg-gray-900/50 rounded overflow-x-auto">
+            <div className="mt-4 p-3 bg-gray-900/50 rounded overflow-x-auto">
               <div style={{ minWidth: Math.max(160, infoPattern.code.split(' ').length * 30) }}>
                 <PatternView viewId="info" pattern={infoPattern} registry={registryRef} size="lg" />
               </div>
