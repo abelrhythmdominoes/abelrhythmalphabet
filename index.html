@@ -193,6 +193,14 @@ const DIMS = {
   lg: { dot: 16, dash: 24, dashH: 3, h: 38 }
 };
 
+// Frame sizes of the sequencer: which view size to draw, and how wide a frame is
+// (width = max(min, longest pattern in steps * perStep + pad))
+const SEQ_SIZES = {
+  S: { view: 'sm', perStep: 16, pad: 28, min: 84, label: 'Small' },
+  M: { view: 'md', perStep: 22, pad: 32, min: 112, label: 'Medium' },
+  L: { view: 'lg', perStep: 30, pad: 36, min: 156, label: 'Large' }
+};
+
 const POP = {
   hit: [{ transform: 'scale(2.1)' }, { transform: 'scale(1.6)' }],
   rest: [{ transform: 'scaleY(3.4)' }, { transform: 'scaleY(2.4)' }],
@@ -1254,6 +1262,7 @@ const ABELRhythmDominoes = () => {
   const [playKind, setPlayKind] = useState(null); // null | 'solo' | 'sequence' | 'fused' | 'layers'
   const [sequence, setSequence] = useState([]);
   const [isSequenceMode, setIsSequenceMode] = useState(false);
+  const [seqSize, setSeqSize] = useState('M'); // size of the frames in the sequencer: 'S' | 'M' | 'L'
   const [isFusionMode, setIsFusionMode] = useState(false);
   const [isLayerMode, setIsLayerMode] = useState(false);
   const [fusionPatterns, setFusionPatterns] = useState([]);
@@ -1639,6 +1648,35 @@ const ABELRhythmDominoes = () => {
   const [displayMode, setDisplayMode] = useState('dots'); // 'dots' | 'notation' | 'pie'
   const [lightTheme, setLightTheme] = useState(false); // the dark theme is the default
   THEME.light = lightTheme;
+
+  // restore the saved frame size of the sequencer
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        if (window.storage) {
+          const r = await window.storage.get('abel:seqsize');
+          if (!cancelled && r && SEQ_SIZES[r.value]) setSeqSize(r.value);
+        }
+      } catch (e) {
+        /* no saved size: keep the default */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const chooseSeqSize = (key) => {
+    setSeqSize(key);
+    try {
+      if (window.storage) {
+        Promise.resolve(window.storage.set('abel:seqsize', key)).catch(() => {});
+      }
+    } catch (e) {
+      /* size could not be saved: ignore */
+    }
+  };
 
   // restore the saved theme (if the environment can store it); dark stays the default
   useEffect(() => {
@@ -2260,7 +2298,15 @@ const ABELRhythmDominoes = () => {
 
   // All sequencer frames share the size of the longest pattern in the sequence
   const seqMaxSteps = sequence.reduce((m, p) => Math.max(m, p.code.split(' ').length), 1);
-  const seqTileWidth = Math.max(84, seqMaxSteps * 16 + 28);
+  const seqPreset = SEQ_SIZES[seqSize] || SEQ_SIZES.M;
+  const seqTileWidth = Math.max(seqPreset.min, seqMaxSteps * seqPreset.perStep + seqPreset.pad);
+
+  // Frames are grouped into measures: one frame = one beat, so a bar holds `beatsPerBar` frames
+  const seqBars = [];
+  for (let i = 0; i < sequence.length; i += beatsPerBar) {
+    seqBars.push(Array.from({ length: Math.min(beatsPerBar, sequence.length - i) }, (_, k) => i + k));
+  }
+  const seqLastBarComplete = sequence.length > 0 && sequence.length % beatsPerBar === 0;
 
   const infoPattern = playKind === 'solo' ? selectedPattern : playKind === 'fused' ? fusedPattern : null;
 
@@ -2869,6 +2915,25 @@ const ABELRhythmDominoes = () => {
                   </span>
                 </h3>
                 <div className="flex flex-wrap gap-2">
+                  <div
+                    role="group"
+                    aria-label="Frame size"
+                    className="flex rounded-lg overflow-hidden border border-purple-500/60"
+                  >
+                    {Object.keys(SEQ_SIZES).map((k) => (
+                      <button
+                        key={k}
+                        onClick={() => chooseSeqSize(k)}
+                        aria-pressed={seqSize === k}
+                        title={`${SEQ_SIZES[k].label} frames`}
+                        className={`px-3 py-2 font-bold transition-colors ${
+                          seqSize === k ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
+                        }`}
+                      >
+                        {k}
+                      </button>
+                    ))}
+                  </div>
                   <button
                     onClick={playSequence}
                     disabled={sequence.length === 0}
@@ -2913,64 +2978,88 @@ const ABELRhythmDominoes = () => {
                   Click on patterns below to add them to your sequence
                 </div>
               ) : (
-                <div className="flex flex-wrap gap-2">
-                  {sequence.map((pattern, index) => (
+                <div className="flex flex-wrap gap-x-2 gap-y-4 items-start">
+                  {seqBars.map((bar, b) => (
                     <div
-                      key={index}
-                      ref={(el) => {
-                        seqTileRefs.current[index] = el;
-                      }}
-                      data-tile
-                      className="abel-tile relative group bg-gray-700 rounded-lg p-3 border-2 border-purple-400"
-                      onPointerDown={(e) => onTilePointerDown(e, index)}
-                      onContextMenu={(e) => e.preventDefault()}
+                      key={b}
+                      data-bar-group
+                      className="flex flex-col"
                       style={{
-                        width: seqTileWidth,
                         maxWidth: '100%',
-                        flexShrink: 0,
-                        opacity: dragState && dragState.from === index ? 0.35 : 1,
-                        transform: dragState && dragState.from === index ? 'scale(0.96)' : 'none',
-                        userSelect: 'none',
-                        WebkitUserSelect: 'none',
-                        WebkitTouchCallout: 'none',
-                        transition: 'opacity .15s, transform .15s'
+                        paddingLeft: b > 0 ? 8 : 0,
+                        paddingRight: b === seqBars.length - 1 && seqLastBarComplete ? 8 : 0,
+                        borderLeft: b > 0 ? '2px solid rgba(192,132,252,.6)' : 'none',
+                        borderRight:
+                          b === seqBars.length - 1 && seqLastBarComplete ? '4px double rgba(192,132,252,.6)' : 'none'
                       }}
                     >
-                      {dropSide(index) && (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            bottom: 0,
-                            [dropSide(index) === 'after' ? 'right' : 'left']: -6,
-                            width: 3,
-                            borderRadius: 2,
-                            background: '#fff',
-                            boxShadow: '0 0 8px #c084fc',
-                            zIndex: 20
-                          }}
-                        />
-                      )}
-                      <button
-                        onClick={() => removeFromSequence(index)}
-                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                      >
-                        ×
-                      </button>
-                      <div className="text-xs font-bold mb-1" style={{ color: labelColorFor(pattern.color) }}>
-                        {pattern.letter}
+                      <div className="text-xs font-mono text-gray-400 mb-1 select-none" aria-hidden="true">
+                        {b + 1}
                       </div>
-                      <PatternView
-                        viewId={`seq:${index}`}
-                        pattern={pattern}
-                        registry={registryRef}
-                        size="sm"
-                      />
-                      <div
-                        className="text-xs text-gray-400 mt-1 font-mono"
-                        style={{ visibility: pattern.binary.length > 4 ? 'visible' : 'hidden' }}
-                      >
-                        {pattern.binary.length} sub.
+                      <div className="flex flex-wrap gap-2" style={{ maxWidth: '100%' }}>
+                        {bar.map((index) => {
+                          const pattern = sequence[index];
+                          return (
+                          <div
+                            key={index}
+                            ref={(el) => {
+                              seqTileRefs.current[index] = el;
+                            }}
+                            data-tile
+                            className="abel-tile relative group bg-gray-700 rounded-lg p-3 border-2 border-purple-400"
+                            onPointerDown={(e) => onTilePointerDown(e, index)}
+                            onContextMenu={(e) => e.preventDefault()}
+                            style={{
+                              width: seqTileWidth,
+                              maxWidth: '100%',
+                              flexShrink: 0,
+                              opacity: dragState && dragState.from === index ? 0.35 : 1,
+                              transform: dragState && dragState.from === index ? 'scale(0.96)' : 'none',
+                              userSelect: 'none',
+                              WebkitUserSelect: 'none',
+                              WebkitTouchCallout: 'none',
+                              transition: 'opacity .15s, transform .15s'
+                            }}
+                          >
+                            {dropSide(index) && (
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  bottom: 0,
+                                  [dropSide(index) === 'after' ? 'right' : 'left']: -6,
+                                  width: 3,
+                                  borderRadius: 2,
+                                  background: '#fff',
+                                  boxShadow: '0 0 8px #c084fc',
+                                  zIndex: 20
+                                }}
+                              />
+                            )}
+                            <button
+                              onClick={() => removeFromSequence(index)}
+                              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            >
+                              ×
+                            </button>
+                            <div className="text-xs font-bold mb-1" style={{ color: labelColorFor(pattern.color) }}>
+                              {pattern.letter}
+                            </div>
+                            <PatternView
+                              viewId={`seq:${index}`}
+                              pattern={pattern}
+                              registry={registryRef}
+                              size={seqPreset.view}
+                            />
+                            <div
+                              className="text-xs text-gray-400 mt-1 font-mono"
+                              style={{ visibility: pattern.binary.length > 4 ? 'visible' : 'hidden' }}
+                            >
+                              {pattern.binary.length} sub.
+                            </div>
+                          </div>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
