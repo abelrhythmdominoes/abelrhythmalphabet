@@ -2881,6 +2881,16 @@ const ABELRhythmDominoes = () => {
     return window.location.href.split('#')[0] + '#' + p.toString();
   };
 
+  // Opens ABEL Play (play.html, next to this page) with the current sequence, tempo and beats per bar
+  const playCurrentSequence = () => {
+    if (sequence.length === 0) return;
+    const p = new URLSearchParams();
+    const snap = currentSnapshot();
+    Object.keys(snap).forEach((k) => p.set(k, snap[k]));
+    const base = window.location.href.split('#')[0].split('?')[0].replace(/[^/]*$/, '');
+    window.open(base + 'play.html#' + p.toString(), '_blank');
+  };
+
   const shareCurrentSequence = async () => {
     if (sequence.length === 0) return;
     const url = buildShareUrl();
@@ -4564,6 +4574,16 @@ const ABELRhythmDominoes = () => {
                     }`}
                   >
                     Share link
+                  </button>
+                  <button
+                    onClick={playCurrentSequence}
+                    disabled={sequence.length === 0}
+                    title="Play this sequence yourself with your keyboard or a MIDI pad (opens ABEL Play)"
+                    className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
+                      sequence.length === 0 ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
+                    }`}
+                  >
+                    ▶ Play it
                   </button>
                 </div>
                 {saveMsg && <div className="text-sm text-emerald-300" role="status">{saveMsg}</div>}

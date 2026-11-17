@@ -1,0 +1,2250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>ABEL Play – Input setup</title>
+<style>
+  :root {
+    --bg: #111827; --card: #1f2937; --card2: #374151; --line: #4b5563; --text: #f9fafb; --muted: #9ca3af;
+    --purple: #9333ea; --purple2: #7e22ce; --green: #16a34a; --green2: #15803d; --red: #dc2626; --amber: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.45;
+    padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+  }
+  main { max-width: 860px; margin: 0 auto; padding: 14px 12px 60px; }
+  h1 { font-size: 1.8rem; margin: 6px 0 2px; }
+  h2 { font-size: 1.15rem; margin: 0 0 8px; }
+  p { margin: 0 0 8px; }
+  a { color: #93c5fd; }
+  .muted { color: var(--muted); font-size: .9rem; }
+  .card { background: var(--card); border-radius: 12px; padding: 14px; margin: 12px 0; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .grow { flex: 1 1 auto; min-width: 0; }
+  button, select, input[type=text] { font: inherit; color: inherit; }
+  button {
+    min-height: 44px; padding: 0 16px; border: 0; border-radius: 10px; background: var(--card2);
+    cursor: pointer; font-weight: 700;
+  }
+  button:hover { background: #4b5563; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button.primary { background: var(--green); } button.primary:hover { background: var(--green2); }
+  button.accent { background: var(--purple); } button.accent:hover { background: var(--purple2); }
+  button.danger { background: var(--red); }
+  button.small { min-height: 36px; padding: 0 12px; font-size: .9rem; }
+  select { min-height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--card2); padding: 0 10px; max-width: 100%; }
+  input[type=range] { width: 100%; min-height: 32px; accent-color: var(--purple); }
+  .msg { padding: 8px 10px; border-radius: 8px; background: #111827; border: 1px solid var(--line); margin-top: 8px; font-size: .92rem; }
+  .msg.ok { border-color: #166534; } .msg.warn { border-color: #b45309; } .msg.bad { border-color: #991b1b; }
+  .dev { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid #374151; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #6b7280; flex: 0 0 auto; }
+  .dot.on { background: #22c55e; }
+  .bind { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid #374151; }
+  .bind .what { flex: 1 1 220px; min-width: 0; }
+  .bind .what b { font-weight: 700; }
+  .tag { display: inline-block; font-size: .75rem; padding: 1px 8px; border-radius: 999px; background: #4b5563; margin-left: 6px; }
+  .tag.ghost { background: #6d28d9; }
+  #log { font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #0b1220; border-radius: 8px; padding: 8px; height: 250px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; }
+  #log .hit { color: #86efac; } #log .unbound { color: #fcd34d; } #log .sys { color: #93c5fd; } #log .other { color: #9ca3af; }
+  .pads { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+  .pad { min-height: 64px; background: var(--card2); transition: transform .08s, background .08s; }
+  .pad.flash { background: var(--purple); transform: scale(1.06); }
+  .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .65); display: none; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 16px 10px; z-index: 50; }
+  .overlay.open { display: flex; }
+  .panel { background: var(--card); border-radius: 14px; padding: 16px; width: 100%; max-width: 520px; border: 1px solid var(--line); }
+  .field { margin: 12px 0; }
+  .field > label.t { display: block; font-weight: 700; margin-bottom: 6px; }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seg label { flex: 1 1 120px; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg span { display: flex; align-items: center; justify-content: center; text-align: center; min-height: 44px; padding: 4px 10px; border-radius: 10px; background: var(--card2); cursor: pointer; font-weight: 700; }
+  .seg input:checked + span { background: var(--purple); }
+  .seg input:focus-visible + span { outline: 2px solid #fff; }
+  .learned { font-weight: 700; color: #86efac; }
+  label.check { display: flex; align-items: center; gap: 10px; min-height: 40px; cursor: pointer; }
+  label.check input { width: 22px; height: 22px; accent-color: var(--purple); }
+  .big { font-size: 1.3rem; font-weight: 800; }
+  textarea.seq { width: 100%; min-height: 64px; resize: vertical; background: #0b1220; color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: 16px ui-monospace, Consolas, monospace; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { min-height: 36px; padding: 0 12px; font-size: .88rem; border-radius: 999px; background: #243047; }
+  .sgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 14px; margin: 12px 0; align-items: end; }
+  .sgrid label.t { display: block; font-weight: 700; font-size: .9rem; margin-bottom: 4px; }
+  .hud { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 8px; text-align: center; }
+  .hud div { background: #111827; border-radius: 10px; padding: 6px 4px; }
+  .hud .v { font-size: 1.5rem; font-weight: 800; line-height: 1.2; }
+  .hud .k { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  #g-canvas { width: 100%; height: min(62vh, 460px); display: block; background: #0b1220; border-radius: 12px; touch-action: manipulation; }
+  .result { margin-top: 10px; }
+  .grade { font-size: 3rem; font-weight: 900; line-height: 1; }
+  .counts { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0; font-weight: 700; }
+</style>
+</head>
+<body>
+<main>
+  <div id="load-error" class="msg bad" role="alert" hidden></div>
+  <header>
+    <p class="muted"><a href="./index.html">← Back to ABEL</a></p>
+    <h1>ABEL Play</h1>
+    <p class="muted">Play ABEL rhythms with your computer keyboard or a MIDI drum pad. Everything is saved on this device.</p>
+  </header>
+
+  <!-- 0. GAME -->
+  <section class="card" aria-labelledby="h-game">
+    <h2 id="h-game">▶ Play a sequence</h2>
+    <label for="g-seq" class="muted" style="display:block;margin-bottom:6px">Type the letters of a sequence (for example <b>A,B',F+K,D</b>) or paste the link from ABEL's “Share link” button.</label>
+    <textarea id="g-seq" class="seq" rows="2" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="A,B,C,D"></textarea>
+    <div class="row" style="margin-top:8px">
+      <button id="g-load" class="accent small">Load sequence</button>
+      <span id="g-summary" class="muted grow"></span>
+    </div>
+    <div id="g-error" class="msg bad" hidden></div>
+    <div class="chips" id="g-examples" aria-label="Example sequences"></div>
+
+    <div class="sgrid">
+      <div><label class="t" for="g-tempo">Tempo: <span id="g-tempo-val">80 BPM</span></label><input id="g-tempo" type="range" min="40" max="200" step="1" value="80"></div>
+      <div><label class="t" for="g-loops">Repeat the sequence</label><select id="g-loops"></select></div>
+      <div><label class="t" for="g-beats">Beats per bar</label><select id="g-beats"></select></div>
+      <div><label class="t" for="g-diff">Difficulty</label><select id="g-diff"></select></div>
+      <div><label class="t" for="g-voice">Sound for “Listen first”</label><select id="g-voice"></select></div>
+    </div>
+    <label class="check"><input type="checkbox" id="g-metro" checked> Metronome clicks during the game</label>
+    <label class="check"><input type="checkbox" id="g-ghost"> Rests are ghost notes (play them with a ghost key or pad)</label>
+
+    <div class="row" style="margin-top:10px">
+      <button id="g-play" class="primary" disabled>▶ Play</button>
+      <button id="g-listen" disabled>👂 Listen first</button>
+      <button id="g-stop" class="danger" disabled>■ Stop</button>
+    </div>
+
+    <div class="hud" id="g-hud" aria-live="off">
+      <div><div class="v" id="g-hud-score">0</div><div class="k">Score</div></div>
+      <div><div class="v" id="g-hud-combo">0</div><div class="k">Combo</div></div>
+      <div><div class="v" id="g-hud-acc">—</div><div class="k">Accuracy</div></div>
+    </div>
+    <div id="g-result" class="msg result" role="status" hidden></div>
+    <canvas id="g-canvas" aria-label="Note highway"></canvas>
+    <p class="muted" style="margin-top:6px">Hit any bound key or pad when a note reaches the line. Keys and pads are set up lower on this page.</p>
+  </section>
+
+  <!-- 1. CONNECT -->
+  <section class="card" aria-labelledby="h-connect">
+    <h2 id="h-connect">1 · Connect</h2>
+    <div class="row">
+      <button id="btn-midi" class="primary">Enable MIDI + audio</button>
+      <span class="muted grow">Plug in your device any time: it is detected automatically.</span>
+    </div>
+    <div id="midi-msg" class="msg">MIDI is not enabled yet. The keyboard works already.</div>
+    <div id="devices" style="margin-top:8px"></div>
+    <div id="audio-msg" class="msg">Audio starts with your first click or key press.</div>
+  </section>
+
+  <!-- 2. BINDINGS -->
+  <section class="card" aria-labelledby="h-bind">
+    <h2 id="h-bind">2 · Key &amp; MIDI bindings</h2>
+    <p class="muted">Choose which key, MIDI note or whole MIDI device plays which sound. A <b>ghost</b> binding ignores how hard you hit and always plays at a fixed low volume.</p>
+    <div class="row" style="margin:8px 0">
+      <button id="btn-add" class="accent">+ Add binding</button>
+      <button id="btn-preset-kb" class="small">Add keyboard starter (D F J K + S ghost)</button>
+      <button id="btn-preset-gm" class="small">Add General MIDI drum map</button>
+      <button id="btn-clear" class="small danger">Remove all</button>
+    </div>
+    <div id="bind-list"></div>
+  </section>
+
+  <!-- 3. LATENCY -->
+  <section class="card" aria-labelledby="h-lat">
+    <h2 id="h-lat">3 · Latency offset</h2>
+    <p class="muted">Every hit is compared with the music after being shifted by this amount. If you always feel you hit late, raise it; if early, lower it. The highway and the sound already follow the same audio clock.</p>
+    <div class="row">
+      <span class="big" id="off-val">0 ms</span>
+      <input id="off-range" class="grow" type="range" min="-150" max="150" step="1" value="0" aria-label="Latency offset in milliseconds">
+      <button id="off-reset" class="small">Reset</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button id="btn-cal">Measure my latency</button>
+      <span class="muted grow">Hit along with 10 clicks (any bound key or pad). This also includes your own natural habit of hitting slightly early or late, so repeat it once or twice.</span>
+    </div>
+    <div id="cal-msg" class="msg" hidden></div>
+  </section>
+
+  <!-- 4. TEST PADS -->
+  <section class="card" aria-labelledby="h-pads">
+    <h2 id="h-pads">4 · Test the sounds</h2>
+    <div id="pads" class="pads"></div>
+  </section>
+
+  <!-- 5. MONITOR -->
+  <section class="card" aria-labelledby="h-mon">
+    <h2 id="h-mon">5 · Live monitor</h2>
+    <div class="row" style="margin-bottom:8px">
+      <label class="check"><input type="checkbox" id="chk-other"> Show other MIDI messages (CC, pitch bend…)</label>
+      <button id="btn-log-clear" class="small">Clear</button>
+      <button id="btn-log-copy" class="small">Copy log</button>
+    </div>
+    <div id="log" role="log" aria-live="off"></div>
+    <textarea id="copy-box" hidden rows="6" style="width:100%;margin-top:8px;background:#0b1220;color:#e5e7eb;border:1px solid #4b5563;border-radius:8px;padding:8px;font:12px ui-monospace,Consolas,monospace" aria-label="Log text to copy"></textarea>
+    <p class="muted" style="margin-top:6px">Copy the log and send it to me if something does not behave as expected.</p>
+  </section>
+</main>
+
+<!-- BINDING MODAL -->
+<div id="overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="m-title">
+  <div class="panel">
+    <h2 id="m-title">Add binding</h2>
+
+    <div class="field">
+      <label class="t">What do you want to bind?</label>
+      <div class="seg" id="m-kind">
+        <label><input type="radio" name="kind" value="key"><span>A key</span></label>
+        <label><input type="radio" name="kind" value="note"><span>A MIDI note</span></label>
+        <label><input type="radio" name="kind" value="device"><span>A whole MIDI device</span></label>
+      </div>
+    </div>
+
+    <div class="field" id="m-learn-wrap">
+      <label class="t" id="m-learn-label">Key</label>
+      <div class="row">
+        <button id="m-learn" class="accent">Learn</button>
+        <span id="m-learned" class="grow muted">Nothing chosen yet.</span>
+      </div>
+      <div id="m-note-dev" class="field" hidden style="margin:6px 0 0">
+        <label class="check"><input type="checkbox" id="m-only-dev"> Only for this device <span class="muted" id="m-dev-name"></span></label>
+      </div>
+      <div id="m-device-pick" class="field" hidden style="margin:8px 0 0">
+        <label class="t" for="m-dev-select">…or pick a connected device</label>
+        <select id="m-dev-select"></select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="t" for="m-voice">Plays this sound</label>
+      <select id="m-voice"></select>
+    </div>
+
+    <div class="field">
+      <label class="check"><input type="checkbox" id="m-ghost"> <span><b>Ghost note</b><br><span class="muted">Ignores how hard you hit: always the same low volume.</span></span></label>
+      <div id="m-ghost-opts" hidden style="padding-left:32px">
+        <label class="t" for="m-vel" style="font-weight:600">Fixed volume: <span id="m-vel-val">25%</span></label>
+        <input id="m-vel" type="range" min="2" max="60" step="1" value="25">
+        <label class="check"><input type="checkbox" id="m-silent"> Silent (counts as a hit but makes no sound)</label>
+      </div>
+      <p class="muted" id="m-normal-note"></p>
+    </div>
+
+    <div id="m-err" class="msg bad" hidden></div>
+    <div class="row" style="justify-content:flex-end; margin-top:12px">
+      <button id="m-cancel">Cancel</button>
+      <button id="m-save" class="primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+window.__startPlay = function () {
+  'use strict';
+  var A = window.AbelInput;
+  var S = window.AbelSounds;
+  var $ = function (id) { return document.getElementById(id); };
+
+  var VOICE_NAMES = {};
+  Object.keys(S.INSTRUMENTS).forEach(function (k) { VOICE_NAMES[k] = S.INSTRUMENTS[k].name; });
+
+  /* ---------------------------------------------------------------- settings */
+  var settings = A.loadSettings();
+  if (!settings.bindings) {
+    settings.bindings = A.keyboardStarter(); // first visit: the keyboard works right away
+    A.saveSettings(settings);
+  }
+  function save() { A.saveSettings(settings); }
+
+  /* ---------------------------------------------------------------- log */
+  var logLines = [];
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function stamp() {
+    var d = new Date();
+    return pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds()) + '.' + ('00' + d.getMilliseconds()).slice(-3);
+  }
+  function logLine(cls, text) {
+    var line = stamp() + '  ' + text;
+    logLines.push(line);
+    if (logLines.length > 600) logLines.shift();
+    var box = $('log');
+    var stick = box.scrollTop + box.clientHeight >= box.scrollHeight - 30;
+    var div = document.createElement('div');
+    div.className = cls;
+    div.textContent = line;
+    box.appendChild(div);
+    while (box.childNodes.length > 120) box.removeChild(box.firstChild);
+    if (stick) box.scrollTop = box.scrollHeight;
+  }
+  $('btn-log-clear').onclick = function () { logLines = []; $('log').textContent = ''; };
+  function showCopyBox(text) {
+    var box = $('copy-box');
+    box.hidden = false;
+    box.value = text;
+    box.focus();
+    box.select();
+    logLine('sys', 'Select all in the box below the log and copy it (Ctrl+C).');
+  }
+  $('btn-log-copy').onclick = function () {
+    var text = logLines.join('\n');
+    var done = function () { logLine('sys', 'Log copied to the clipboard.'); };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () { showCopyBox(text); });
+      else showCopyBox(text);
+    } catch (e) {
+      showCopyBox(text);
+    }
+  };
+
+  /* ---------------------------------------------------------------- audio */
+  var ctx = null;
+  var samples = null;
+  var audioPromise = null;
+  function setAudioMsg(text, cls) {
+    var el = $('audio-msg');
+    el.textContent = text;
+    el.className = 'msg ' + (cls || '');
+  }
+  function ensureAudio() {
+    if (audioPromise) {
+      if (ctx && ctx.state !== 'running') { try { ctx.resume(); } catch (e) { /* ignore */ } }
+      return audioPromise;
+    }
+    audioPromise = new Promise(function (resolve) {
+      try {
+        try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* ignore */ }
+        var AC = window.AudioContext || window.webkitAudioContext;
+        ctx = new AC({ latencyHint: 'interactive' });
+        ctx.addEventListener('statechange', showAudio);
+        var p = ctx.state !== 'running' ? ctx.resume() : Promise.resolve();
+        Promise.resolve(p).catch(function () {}).then(function () { return S.renderSamples(ctx); }).then(function (s) {
+          samples = s;
+          showAudio();
+          resolve(ctx);
+        });
+      } catch (e) {
+        setAudioMsg('Audio is not available in this browser.', 'bad');
+        resolve(null);
+      }
+    });
+    return audioPromise;
+  }
+  function showAudio() {
+    if (!ctx) return;
+    var lat = ctx.outputLatency ? Math.round(ctx.outputLatency * 1000) + ' ms output latency reported' : 'output latency not reported by this browser';
+    var running = ctx.state === 'running';
+    setAudioMsg('Audio ' + (running ? 'running' : 'is ' + ctx.state + ' (click or press a key to start it)') + ' · ' + Math.round(ctx.sampleRate) + ' Hz · ' + lat + (samples ? '' : ' · using live synthesis'), running ? 'ok' : 'warn');
+  }
+
+  // Plays one hit as soon as possible (lowest latency). velocity 0..1
+  function playVoice(voice, velocity) {
+    if (!ctx || ctx.state !== 'running') return false;
+    var gain = ctx.createGain();
+    gain.gain.value = A.velocityToGain(velocity);
+    gain.connect(ctx.destination);
+    var buf = samples && samples[voice];
+    if (buf) {
+      var src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(gain);
+      src.start(0);
+    } else if (S.INSTRUMENT_FN[voice]) {
+      S.INSTRUMENT_FN[voice](ctx, ctx.currentTime, 1, gain);
+    }
+    return true;
+  }
+
+  function click(time, strong, dest) {
+    var osc = ctx.createOscillator();
+    var g = ctx.createGain();
+    osc.connect(g);
+    g.connect(dest || ctx.destination);
+    osc.frequency.value = strong ? 1200 : 900;
+    g.gain.setValueAtTime(0, time);
+    g.gain.linearRampToValueAtTime(0.3, time + 0.001);
+    g.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+    osc.start(time);
+    osc.stop(time + 0.06);
+  }
+
+  /* ---------------------------------------------------------------- MIDI */
+  var midi = A.createMidiManager({
+    onHit: function (ev) { handleHit(ev); },
+    onOther: function (o) {
+      if (!$('chk-other').checked) return;
+      var i = o.info;
+      logLine('other', 'MIDI · ' + o.deviceName + ' · ' + i.type + ' ch' + i.channel + (i.cc != null ? ' cc' + i.cc : '') + (i.value != null ? ' = ' + i.value : '') + (i.note != null ? ' note ' + i.note : ''));
+    },
+    onDevices: renderDevices,
+    onLog: function (t) { logLine('sys', t); }
+  });
+
+  function setMidiMsg(text, cls) {
+    var el = $('midi-msg');
+    el.textContent = text;
+    el.className = 'msg ' + (cls || '');
+  }
+  function renderDevices(list) {
+    var box = $('devices');
+    box.textContent = '';
+    if (!list.length) {
+      var p = document.createElement('p');
+      p.className = 'muted';
+      p.textContent = 'No MIDI input device found yet. Plug one in: it will appear here.';
+      box.appendChild(p);
+    }
+    list.forEach(function (d) {
+      var row = document.createElement('div');
+      row.className = 'dev';
+      var dot = document.createElement('span');
+      dot.className = 'dot' + (d.state === 'connected' ? ' on' : '');
+      var name = document.createElement('span');
+      name.className = 'grow';
+      name.textContent = d.name + (d.manufacturer ? ' · ' + d.manufacturer : '');
+      var st = document.createElement('span');
+      st.className = 'muted';
+      st.textContent = d.state;
+      row.appendChild(dot); row.appendChild(name); row.appendChild(st);
+      box.appendChild(row);
+    });
+    if (modalOpen) fillDevicePicker();
+  }
+
+  function enableMidi() {
+    ensureAudio();
+    midi.enable().then(function (status) {
+      if (status === 'ready') setMidiMsg('MIDI is on. Hit a pad: it appears in the monitor below.', 'ok');
+      else if (status === 'unsupported') setMidiMsg('Web MIDI is not available here. Safari and iPhone do not support it, and a preview frame can hide it. Open this page in its own tab in Chrome or Edge on a computer or Android. The keyboard still works.', 'warn');
+      else if (status === 'blocked') setMidiMsg('MIDI is blocked by the page that hosts this game (for example a preview frame). Open this page in its own browser tab, on its own address.', 'bad');
+      else if (status === 'denied') setMidiMsg('MIDI permission was refused. Allow it in the address bar (lock icon → site settings → MIDI devices), then try again.', 'bad');
+      else setMidiMsg('MIDI could not start. See the log below.', 'bad');
+    });
+  }
+  $('btn-midi').onclick = enableMidi;
+
+  // If MIDI was allowed before, reconnect without a click
+  try {
+    if (navigator.permissions && navigator.permissions.query && navigator.requestMIDIAccess) {
+      navigator.permissions.query({ name: 'midi' }).then(function (p) {
+        if (p.state === 'granted') enableMidi();
+      }, function () {});
+    }
+  } catch (e) { /* ignore */ }
+
+  /* ---------------------------------------------------------------- keyboard */
+  var RESERVED = /^(Tab|Escape|ContextMenu|CapsLock|NumLock|ScrollLock|Pause|PrintScreen|F\d+|Shift.*|Control.*|Alt.*|Meta.*|OS.*)$/;
+  function keyLabel(e) {
+    return e.key && e.key.length === 1 ? e.key.toUpperCase() : (e.key === ' ' ? 'Space' : e.key || e.code);
+  }
+  window.addEventListener('keydown', function (e) {
+    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (RESERVED.test(e.code)) return;
+    var t = e.target;
+    var typing = t && (t.isContentEditable || t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && /^(text|search|number|email|url|password|tel)$/i.test(t.type || 'text')));
+    if (typing && !learning) return;
+    if (t && t.tagName === 'SELECT' && !learning && !run) return;
+    // keep Space / Enter working on a focused button when nothing is being learned or played
+    if ((e.code === 'Space' || e.code === 'Enter') && t && t.tagName === 'BUTTON' && !learning && !run) return;
+    ensureAudio();
+    var handled = handleHit({ source: 'key', code: e.code, key: e.key, label: keyLabel(e), velocity: null, timeStamp: e.timeStamp });
+    if (handled) e.preventDefault();
+  });
+
+  /* ---------------------------------------------------------------- hits */
+  var padEls = {};
+  function flashPad(voice) {
+    var el = padEls[voice];
+    if (!el) return;
+    el.classList.add('flash');
+    setTimeout(function () { el.classList.remove('flash'); }, 110);
+  }
+  function fmtEvent(ev) {
+    if (ev.source === 'key') return 'KEY  · ' + (ev.label || ev.code) + ' (' + ev.code + ')';
+    return 'MIDI · ' + ev.deviceName + ' · note ' + ev.note + ' vel ' + ev.velocity + ' ch' + ev.channel;
+  }
+
+  var cal = null; // calibration run in progress
+  function handleHit(ev) {
+    if (modalOpen) {
+      if (learning) { capture(ev); return true; }
+      return false;
+    }
+    if (cal && ctx) cal.hits.push(A.perfToAudioTime(ctx, ev.timeStamp));
+    var b = A.resolveBinding(settings.bindings, ev);
+    var stampText = ' @' + ev.timeStamp.toFixed(1) + 'ms';
+    if (!b) {
+      logLine('unbound', fmtEvent(ev) + '  → (not bound)' + stampText);
+      return false;
+    }
+    var v = A.effectiveVelocity(b, ev);
+    var silent = b.ghost && b.silent;
+    var played = silent ? true : playVoice(b.voice, v);
+    flashPad(b.voice);
+    if (run && run.mode === 'play' && run.judge) gameHit(ev, b);
+    logLine('hit', fmtEvent(ev) + '  → ' + (VOICE_NAMES[b.voice] || b.voice) + ' ' + Math.round(v * 100) + '%' + (b.ghost ? ' (ghost' + (silent ? ', silent' : '') + ')' : '') + (played ? '' : '  [audio not running: click the page]') + stampText);
+    return true;
+  }
+
+  /* ---------------------------------------------------------------- bindings list */
+  function renderBindings() {
+    var box = $('bind-list');
+    box.textContent = '';
+    if (!settings.bindings.length) {
+      var p = document.createElement('p');
+      p.className = 'muted';
+      p.textContent = 'No bindings yet. Add one, or use a preset.';
+      box.appendChild(p);
+      return;
+    }
+    settings.bindings.forEach(function (b) {
+      var d = A.describeBinding(b, VOICE_NAMES);
+      var row = document.createElement('div');
+      row.className = 'bind';
+      var what = document.createElement('div');
+      what.className = 'what';
+      var strong = document.createElement('b');
+      strong.textContent = d.from;
+      what.appendChild(strong);
+      what.appendChild(document.createTextNode('  →  ' + d.to));
+      var tag = document.createElement('span');
+      tag.className = 'tag' + (b.ghost ? ' ghost' : '');
+      tag.textContent = d.how;
+      what.appendChild(tag);
+      var edit = document.createElement('button');
+      edit.className = 'small';
+      edit.textContent = 'Edit';
+      edit.onclick = function () { openModal(b); };
+      var del = document.createElement('button');
+      del.className = 'small danger';
+      del.textContent = 'Delete';
+      del.setAttribute('aria-label', 'Delete binding: ' + d.from);
+      del.onclick = function () {
+        settings.bindings = settings.bindings.filter(function (x) { return x.id !== b.id; });
+        save(); renderBindings();
+      };
+      row.appendChild(what); row.appendChild(edit); row.appendChild(del);
+      box.appendChild(row);
+    });
+  }
+  $('btn-preset-kb').onclick = function () {
+    settings.bindings = A.mergeBindings(settings.bindings, A.keyboardStarter()); save(); renderBindings();
+  };
+  $('btn-preset-gm').onclick = function () {
+    settings.bindings = A.mergeBindings(settings.bindings, A.gmDrumPreset()); save(); renderBindings();
+  };
+  var clearArmed = null;
+  $('btn-clear').onclick = function () {
+    if (!settings.bindings.length) return;
+    var btn = $('btn-clear');
+    if (!clearArmed) {
+      btn.textContent = 'Click again to confirm';
+      clearArmed = setTimeout(function () { clearArmed = null; btn.textContent = 'Remove all'; }, 3000);
+      return;
+    }
+    clearTimeout(clearArmed); clearArmed = null; btn.textContent = 'Remove all';
+    settings.bindings = []; save(); renderBindings();
+  };
+  $('btn-add').onclick = function () { openModal(null); };
+
+  /* ---------------------------------------------------------------- modal */
+  var modalOpen = false;
+  var learning = false;
+  var draft = null;
+  var editingId = null;
+
+  function selectedKind() {
+    var r = document.querySelector('#m-kind input:checked');
+    return r ? r.value : 'key';
+  }
+  function setKind(k) {
+    var r = document.querySelector('#m-kind input[value="' + k + '"]');
+    if (r) r.checked = true;
+  }
+  function fillVoices() {
+    var sel = $('m-voice');
+    sel.textContent = '';
+    Object.keys(S.INSTRUMENTS).forEach(function (k) {
+      var o = document.createElement('option');
+      o.value = k;
+      o.textContent = VOICE_NAMES[k];
+      sel.appendChild(o);
+    });
+  }
+  function fillDevicePicker() {
+    var sel = $('m-dev-select');
+    var current = sel.value;
+    sel.textContent = '';
+    var none = document.createElement('option');
+    none.value = '';
+    none.textContent = '(choose…)';
+    sel.appendChild(none);
+    midi.getDevices().forEach(function (d) {
+      var o = document.createElement('option');
+      o.value = d.id;
+      o.textContent = d.name;
+      o.setAttribute('data-name', d.name);
+      sel.appendChild(o);
+    });
+    if (draft && draft.deviceId) sel.value = draft.deviceId;
+    else sel.value = current;
+  }
+
+  function refreshModal() {
+    var kind = selectedKind();
+    draft.kind = kind;
+    $('m-learn-label').textContent = kind === 'key' ? 'Key' : kind === 'note' ? 'MIDI note' : 'MIDI device';
+    $('m-learn').textContent = learning ? 'Cancel learning' : (kind === 'key' ? 'Learn a key' : kind === 'note' ? 'Learn a pad' : 'Learn a device');
+    $('m-note-dev').hidden = !(kind === 'note' && draft.lastDevice);
+    $('m-device-pick').hidden = kind !== 'device';
+    var text;
+    if (learning) text = kind === 'key' ? 'Press the key now…' : 'Hit the pad now…';
+    else if (kind === 'key') text = draft.code ? 'Key ' + (draft.codeLabel || draft.code) : 'Nothing chosen yet.';
+    else if (kind === 'note') text = draft.note != null ? 'MIDI note ' + draft.note : 'Nothing chosen yet.';
+    else text = draft.deviceId || draft.deviceName ? 'Device: ' + (draft.deviceName || draft.deviceId) : 'Nothing chosen yet.';
+    var learned = $('m-learned');
+    learned.textContent = text;
+    learned.className = 'grow ' + (!learning && /^(Key|MIDI note|Device)/.test(text) ? 'learned' : 'muted');
+    if (draft.lastDevice) $('m-dev-name').textContent = '(' + draft.lastDevice.name + ')';
+    var ghost = $('m-ghost').checked;
+    $('m-ghost-opts').hidden = !ghost;
+    $('m-normal-note').textContent = ghost ? '' : (kind === 'key' ? 'Keys have no velocity: they always play at full volume.' : 'Velocity sensitive: the harder you hit, the louder it plays.');
+    $('m-vel-val').textContent = $('m-vel').value + '%';
+  }
+
+  function openModal(binding) {
+    editingId = binding ? binding.id : null;
+    draft = binding ? JSON.parse(JSON.stringify(binding)) : A.makeBinding({ kind: 'key', voice: 'snare' });
+    if (binding && binding.kind === 'note' && (binding.deviceId || binding.deviceName)) {
+      draft.lastDevice = { id: binding.deviceId, name: binding.deviceName };
+    }
+    learning = false;
+    $('m-title').textContent = binding ? 'Edit binding' : 'Add binding';
+    fillVoices();
+    $('m-voice').value = draft.voice;
+    $('m-ghost').checked = !!draft.ghost;
+    $('m-vel').value = Math.round((draft.fixedVelocity || A.DEFAULT_GHOST_VELOCITY) * 100);
+    $('m-silent').checked = !!draft.silent;
+    $('m-only-dev').checked = !!(draft.kind === 'note' && (draft.deviceId || draft.deviceName));
+    setKind(draft.kind);
+    $('m-err').hidden = true;
+    modalOpen = true;
+    $('overlay').classList.add('open');
+    fillDevicePicker();
+    refreshModal();
+    setTimeout(function () { $('m-learn').focus(); }, 0);
+  }
+  function closeModal() {
+    modalOpen = false;
+    learning = false;
+    $('overlay').classList.remove('open');
+  }
+
+  // a key or pad was hit while learning
+  function capture(ev) {
+    var kind = selectedKind();
+    if (kind === 'key' && ev.source === 'key') {
+      draft.code = ev.code;
+      draft.codeLabel = ev.label || ev.code;
+      learning = false;
+    } else if (kind === 'note' && ev.source === 'midi') {
+      draft.note = ev.note;
+      draft.lastDevice = { id: ev.deviceId, name: ev.deviceName };
+      learning = false;
+    } else if (kind === 'device' && ev.source === 'midi') {
+      draft.deviceId = ev.deviceId;
+      draft.deviceName = ev.deviceName;
+      learning = false;
+    } else {
+      return;
+    }
+    $('m-err').hidden = true;
+    refreshModal();
+  }
+
+  $('m-learn').onclick = function () { learning = !learning; refreshModal(); };
+  Array.prototype.forEach.call(document.querySelectorAll('#m-kind input'), function (r) {
+    r.onchange = function () { learning = false; refreshModal(); };
+  });
+  $('m-ghost').onchange = refreshModal;
+  $('m-vel').oninput = refreshModal;
+  $('m-dev-select').onchange = function () {
+    var sel = $('m-dev-select');
+    var opt = sel.options[sel.selectedIndex];
+    draft.deviceId = sel.value || undefined;
+    draft.deviceName = sel.value ? opt.getAttribute('data-name') : undefined;
+    refreshModal();
+  };
+  $('m-cancel').onclick = closeModal;
+  $('overlay').addEventListener('mousedown', function (e) { if (e.target === $('overlay')) closeModal(); });
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modalOpen) { if (learning) { learning = false; refreshModal(); } else closeModal(); }
+  });
+
+  $('m-save').onclick = function () {
+    var kind = selectedKind();
+    var out = { id: editingId || undefined, kind: kind, voice: $('m-voice').value, ghost: $('m-ghost').checked, fixedVelocity: Number($('m-vel').value) / 100, silent: $('m-ghost').checked && $('m-silent').checked };
+    var err = '';
+    if (kind === 'key') {
+      if (!draft.code) err = 'Press "Learn a key", then press the key you want.';
+      out.code = draft.code; out.codeLabel = draft.codeLabel;
+    } else if (kind === 'note') {
+      if (draft.note == null) err = 'Press "Learn a pad", then hit the pad or key you want.';
+      out.note = draft.note;
+      if ($('m-only-dev').checked && draft.lastDevice) { out.deviceId = draft.lastDevice.id; out.deviceName = draft.lastDevice.name; }
+    } else {
+      if (!draft.deviceId && !draft.deviceName) err = 'Hit any pad of the device, or choose it in the list.';
+      out.deviceId = draft.deviceId; out.deviceName = draft.deviceName;
+    }
+    if (err) { $('m-err').textContent = err; $('m-err').hidden = false; return; }
+    var clean = A.sanitizeBinding(out);
+    if (!clean) { $('m-err').textContent = 'This binding is not valid.'; $('m-err').hidden = false; return; }
+    if (editingId) settings.bindings = settings.bindings.map(function (x) { return x.id === editingId ? clean : x; });
+    else settings.bindings.push(clean);
+    save();
+    renderBindings();
+    closeModal();
+  };
+
+  /* ---------------------------------------------------------------- latency */
+  function showOffset() {
+    var v = settings.offsetMs;
+    $('off-val').textContent = (v > 0 ? '+' : '') + v + ' ms';
+    $('off-range').value = v;
+  }
+  $('off-range').oninput = function () { settings.offsetMs = Number($('off-range').value); showOffset(); };
+  $('off-range').onchange = save;
+  $('off-reset').onclick = function () { settings.offsetMs = 0; showOffset(); save(); };
+
+  var CAL_BPM = 100;
+  var CAL_CLICKS = 10;
+  var CAL_WARMUP = 2;
+  $('btn-cal').onclick = function () {
+    if (cal) return;
+    ensureAudio().then(function () {
+      if (!ctx || ctx.state !== 'running') {
+        var m0 = $('cal-msg');
+        m0.hidden = false; m0.className = 'msg warn';
+        m0.textContent = 'Audio is not running yet. Click anywhere on the page, then try again.';
+        return;
+      }
+      var beat = 60 / CAL_BPM;
+      var t0 = ctx.currentTime + 1.3;
+      var clicks = [];
+      for (var i = 0; i < CAL_CLICKS; i++) {
+        clicks.push(t0 + i * beat);
+        click(t0 + i * beat, i % 4 === 0);
+      }
+      cal = { clicks: clicks, hits: [] };
+      var msg = $('cal-msg');
+      msg.hidden = false; msg.className = 'msg';
+      msg.textContent = 'Listen… then hit along with the clicks (the first two are warm-up).';
+      $('btn-cal').disabled = true;
+      setTimeout(function () {
+        var run = cal;
+        cal = null;
+        $('btn-cal').disabled = false;
+        var r = A.computeOffsets(run.clicks.slice(CAL_WARMUP), run.hits, 0.25);
+        if (r.count < 5) {
+          msg.className = 'msg warn';
+          msg.textContent = 'Only ' + r.count + ' usable hit(s) were detected (need at least 5). Try again and hit every click.';
+          return;
+        }
+        var med = Math.round(r.medianMs);
+        msg.className = 'msg ok';
+        msg.textContent = '';
+        var t = document.createElement('div');
+        t.textContent = 'Your typical offset: ' + (med > 0 ? '+' : '') + med + ' ms (' + r.count + ' hits, steadiness ±' + Math.round(r.spreadMs) + ' ms). Positive = you hit after the click.';
+        var use = document.createElement('button');
+        use.className = 'small primary';
+        use.style.marginTop = '8px';
+        use.textContent = 'Use ' + (med > 0 ? '+' : '') + med + ' ms';
+        use.onclick = function () {
+          settings.offsetMs = Math.max(-150, Math.min(150, med));
+          showOffset(); save();
+          logLine('sys', 'Latency offset set to ' + settings.offsetMs + ' ms.');
+        };
+        msg.appendChild(t); msg.appendChild(use);
+        logLine('sys', 'Calibration: median ' + med + ' ms, n=' + r.count + ', spread ±' + Math.round(r.spreadMs) + ' ms.');
+      }, (1.3 + (CAL_CLICKS - 1) * beat + 0.6) * 1000);
+    });
+  };
+
+  /* ---------------------------------------------------------------- test pads */
+  (function buildPads() {
+    var box = $('pads');
+    Object.keys(S.INSTRUMENTS).forEach(function (k) {
+      var b = document.createElement('button');
+      b.className = 'pad';
+      b.textContent = VOICE_NAMES[k];
+      b.onpointerdown = function (e) {
+        e.preventDefault();
+        ensureAudio().then(function () { playVoice(k, 1); });
+        flashPad(k);
+      };
+      b.onkeydown = function (e) { if (e.code === 'Enter' || e.code === 'Space') { /* keyboard bindings handle the sound */ } };
+      box.appendChild(b);
+      padEls[k] = b;
+    });
+  })();
+
+  /* ================================================================ GAME: play a sequence */
+  var G = window.AbelGame;
+  var memStore = {};
+  function lsGet(k) { try { return window.localStorage.getItem(k); } catch (e) { return memStore[k] || null; } }
+  function lsSet(k, v) { try { window.localStorage.setItem(k, v); } catch (e) { memStore[k] = v; } }
+
+  var GS_KEY = 'abel:play:settings:v1';
+  var gs = { tempo: 80, loops: 2, beats: 4, difficulty: 'normal', metro: true, ghost: false, voice: 'snare', seq: 'A,B,C,D' };
+  try {
+    var savedGs = JSON.parse(lsGet(GS_KEY) || 'null');
+    if (savedGs && typeof savedGs === 'object') {
+      ['tempo', 'loops', 'beats'].forEach(function (k) { if (isFinite(Number(savedGs[k]))) gs[k] = Number(savedGs[k]); });
+      if (G.DIFFICULTY[savedGs.difficulty]) gs.difficulty = savedGs.difficulty;
+      if (typeof savedGs.metro === 'boolean') gs.metro = savedGs.metro;
+      if (typeof savedGs.ghost === 'boolean') gs.ghost = savedGs.ghost;
+      if (S.INSTRUMENTS[savedGs.voice]) gs.voice = savedGs.voice;
+      if (typeof savedGs.seq === 'string' && savedGs.seq) gs.seq = savedGs.seq.slice(0, 600);
+    }
+  } catch (e) { /* defaults */ }
+  gs.tempo = Math.max(40, Math.min(200, Math.round(gs.tempo)));
+  function saveGs() { lsSet(GS_KEY, JSON.stringify(gs)); }
+
+  var gSeq = null;     // the loaded sequence
+  var run = null;      // the game / demo in progress
+  var g2 = $('g-canvas').getContext('2d');
+  var RATING_COLOR = { perfect: '#facc15', great: '#4ade80', good: '#60a5fa', miss: '#ef4444', extra: '#f59e0b' };
+  var RATING_TEXT = { perfect: 'Perfect', great: 'Great', good: 'Good', miss: 'Miss', extra: 'Extra' };
+
+  /* ---- settings controls */
+  function fillSelect(id, values, current, fmt) {
+    var sel = $(id);
+    sel.textContent = '';
+    values.forEach(function (v) {
+      var o = document.createElement('option');
+      o.value = String(v);
+      o.textContent = fmt ? fmt(v) : String(v);
+      sel.appendChild(o);
+    });
+    sel.value = String(current);
+  }
+  fillSelect('g-loops', [1, 2, 3, 4, 6, 8], gs.loops, function (v) { return v + (v === 1 ? ' time' : ' times'); });
+  fillSelect('g-beats', [1, 2, 3, 4, 5, 6, 7, 8], gs.beats);
+  fillSelect('g-diff', ['easy', 'normal', 'strict'], gs.difficulty, function (k) { return G.DIFFICULTY[k].label; });
+  fillSelect('g-voice', Object.keys(S.INSTRUMENTS), gs.voice, function (k) { return VOICE_NAMES[k]; });
+  $('g-tempo').value = gs.tempo;
+  $('g-metro').checked = gs.metro;
+  $('g-ghost').checked = gs.ghost;
+  function showTempo() { $('g-tempo-val').textContent = gs.tempo + ' BPM'; $('g-tempo').value = gs.tempo; }
+  function setTempo(v) { gs.tempo = Math.max(40, Math.min(200, Math.round(v))); showTempo(); }
+  function setBeats(v) { gs.beats = Math.max(1, Math.min(8, Math.round(v))); $('g-beats').value = String(gs.beats); }
+  showTempo();
+  $('g-tempo').oninput = function () { setTempo($('g-tempo').value); updateBest(); };
+  $('g-tempo').onchange = saveGs;
+  $('g-loops').onchange = function () { gs.loops = Number($('g-loops').value); saveGs(); updateBest(); };
+  $('g-beats').onchange = function () { gs.beats = Number($('g-beats').value); saveGs(); };
+  $('g-diff').onchange = function () { gs.difficulty = $('g-diff').value; saveGs(); updateBest(); };
+  $('g-voice').onchange = function () { gs.voice = $('g-voice').value; saveGs(); };
+  $('g-metro').onchange = function () { gs.metro = $('g-metro').checked; saveGs(); };
+  $('g-ghost').onchange = function () { gs.ghost = $('g-ghost').checked; saveGs(); updateBest(); };
+
+  /* ---- loading a sequence */
+  var EXAMPLES = [
+    ['Quarter notes', 'A,A,A,A'],
+    ['Eighth notes', 'B,B,B,B'],
+    ['Off-beats', 'D,D,D,D'],
+    ['Syncopation', 'C,D,C,D'],
+    ['Sixteenths', 'M,P,U,V'],
+    ['Rests', "A',C,A',D"],
+    ['Challenge', 'T,Y,Q,Z']
+  ];
+  EXAMPLES.forEach(function (ex) {
+    var b = document.createElement('button');
+    b.className = 'chip';
+    b.textContent = ex[0];
+    b.title = ex[1];
+    b.onclick = function () { if (run) return; $('g-seq').value = ex[1]; loadSequence(ex[1], false); };
+    $('g-examples').appendChild(b);
+  });
+  function gameError(text) {
+    var el = $('g-error');
+    el.hidden = !text;
+    el.textContent = text || '';
+  }
+  function loadSequence(text, fromLink) {
+    var r = G.parseSequence(text);
+    if (!r.items.length) {
+      gSeq = null;
+      gameError(r.errors.join(' '));
+      $('g-summary').textContent = '';
+      updateButtons();
+      drawScene(null);
+      return false;
+    }
+    gSeq = r;
+    gameError(r.errors.length ? r.errors.join(' ') + ' The rest was loaded.' : '');
+    if (r.tempo) setTempo(r.tempo);
+    if (r.beats) setBeats(r.beats);
+    var codeText = r.items.map(function (i) { return i.label; }).join(',');
+    if (fromLink || /[#:\/]/.test(text)) $('g-seq').value = codeText;
+    gs.seq = codeText;
+    saveGs();
+    $('g-summary').textContent = r.items.length + ' pattern' + (r.items.length > 1 ? 's' : '') + ' · ' + r.items.map(function (i) { return i.label; }).join(' ');
+    $('g-result').hidden = true;
+    updateButtons();
+    updateBest();
+    drawScene(null);
+    return true;
+  }
+  $('g-load').onclick = function () { if (!run) loadSequence($('g-seq').value, false); };
+  $('g-seq').onkeydown = function (e) { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { loadSequence($('g-seq').value, false); } };
+
+  function bestKey() {
+    return G.scoreKey(gSeq.items, { tempo: gs.tempo, loops: gs.loops, difficulty: gs.difficulty, ghostRests: gs.ghost });
+  }
+  function updateBest() {
+    var el = $('g-summary');
+    if (!gSeq) return;
+    var base = gSeq.items.length + ' pattern' + (gSeq.items.length > 1 ? 's' : '') + ' · ' + gSeq.items.map(function (i) { return i.label; }).join(' ');
+    var best = G.loadBest(bestKey());
+    el.textContent = base + (best ? ' · Best: ' + best.score + ' (' + best.grade + ', ' + Math.round(best.accuracy) + '%)' : '');
+  }
+  function updateButtons() {
+    var busy = !!run;
+    $('g-play').disabled = busy || !gSeq;
+    $('g-listen').disabled = busy || !gSeq;
+    $('g-stop').disabled = !busy;
+    $('g-load').disabled = busy;
+  }
+
+  /* ---- audio helpers for a run */
+  function playAt(time, voice, level, dest) {
+    var g = ctx.createGain();
+    g.gain.value = level;
+    g.connect(dest);
+    var buf = samples && samples[voice];
+    if (buf) {
+      var src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(g);
+      src.start(time);
+    } else if (S.INSTRUMENT_FN[voice]) {
+      S.INSTRUMENT_FN[voice](ctx, time, 1, g);
+    }
+  }
+
+  function startRun(mode) {
+    if (run) return;
+    if (!gSeq) { gameError('Load a sequence first.'); return; }
+    try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (e) { /* ignore */ }
+    ensureAudio().then(function () {
+      if (run) return;
+      if (!ctx || ctx.state !== 'running') { gameError('Audio is not running yet. Click anywhere on the page, then try again.'); return; }
+      gameError('');
+      var tl = G.buildTimeline({ items: gSeq.items, loops: gs.loops, tempo: gs.tempo, beatsPerBar: gs.beats, ghostRests: gs.ghost, startTime: ctx.currentTime + 0.6 });
+      var gain = ctx.createGain();
+      gain.connect(ctx.destination);
+      tl.beats.forEach(function (b) { if (b.countIn || gs.metro || mode === 'demo') click(b.time, b.isBar, gain); });
+      if (mode === 'demo') tl.notes.forEach(function (n) { playAt(n.time, gs.voice, n.type === 'ghost' ? 0.12 : 1, gain); });
+      var windows = G.windowsFor(gs.difficulty);
+      run = {
+        mode: mode, tl: tl, gain: gain, windows: windows, last: null, raf: 0, heard: 0,
+        judge: mode === 'play' ? G.createJudge({ notes: tl.notes, windows: windows, offsetSec: settings.offsetMs / 1000 }) : null
+      };
+      $('g-result').hidden = true;
+      updateHud();
+      updateButtons();
+      try { // show the score and the highway (once, at the start)
+        var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        $('g-hud').scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
+      } catch (e) { /* ignore */ }
+      run.raf = requestAnimationFrame(frame);
+    });
+  }
+
+  function stopRun() {
+    if (!run) return;
+    cancelAnimationFrame(run.raf);
+    try { run.gain.disconnect(); } catch (e) { /* ignore */ }
+    run = null;
+    updateButtons();
+    updateHud();
+    drawScene(null);
+  }
+
+  function frame() {
+    if (!run) return;
+    var heard = A.perfToAudioTime(ctx, performance.now());
+    run.heard = heard;
+    if (run.judge) {
+      var missed = run.judge.sweep(heard);
+      if (missed.length) {
+        run.last = { text: 'Miss', color: RATING_COLOR.miss, at: heard };
+        updateHud();
+      }
+    }
+    drawScene(heard);
+    if (heard > run.tl.endTime + 0.5) { finishRun(); return; }
+    run.raf = requestAnimationFrame(frame);
+  }
+
+  function gameHit(ev, b) {
+    if (!run || !run.judge || !ctx) return;
+    var heard = A.perfToAudioTime(ctx, ev.timeStamp);
+    var tl = run.tl;
+    var off = settings.offsetMs / 1000;
+    if (heard - off < tl.seqStart - run.windows.good - 0.1) return; // count-in: ignored
+    if (heard - off > tl.endTime + 0.4) return;
+    var r = run.judge.hit(heard, !!b.ghost);
+    if (r.kind === 'extra') {
+      run.last = { text: 'Extra hit', color: RATING_COLOR.extra, at: heard };
+    } else {
+      var d = Math.round(r.deltaMs);
+      run.last = { text: RATING_TEXT[r.rating] + '  ' + (d > 0 ? '+' : '') + d + ' ms', color: RATING_COLOR[r.rating], at: heard };
+    }
+    updateHud();
+  }
+
+  function updateHud() {
+    var st = run && run.judge ? run.judge.stats() : null;
+    $('g-hud-score').textContent = st ? String(st.score) : '0';
+    $('g-hud-combo').textContent = st ? String(st.combo) : '0';
+    $('g-hud-acc').textContent = st && st.judged + st.extra > 0 ? Math.round(st.accuracy) + '%' : '—';
+  }
+
+  function finishRun() {
+    var r = run;
+    if (!r) return;
+    cancelAnimationFrame(r.raf);
+    try { r.gain.disconnect(); } catch (e) { /* ignore */ }
+    run = null;
+    updateButtons();
+    drawScene(null);
+    var box = $('g-result');
+    box.hidden = false;
+    box.className = 'msg result ok';
+    box.textContent = '';
+    if (!r.judge) {
+      box.textContent = 'That was the sequence. Now press Play and hit the notes yourself.';
+      return;
+    }
+    r.judge.finish();
+    var st = r.judge.stats();
+    var gr = G.grade(st.accuracy);
+    var key = bestKey();
+    var saved = G.saveBest(key, { score: st.score, accuracy: st.accuracy, grade: gr });
+    var big = document.createElement('div');
+    big.className = 'row';
+    var gEl = document.createElement('div');
+    gEl.className = 'grade';
+    gEl.textContent = gr;
+    var info = document.createElement('div');
+    info.className = 'grow';
+    var l1 = document.createElement('div');
+    l1.className = 'big';
+    l1.textContent = Math.round(st.accuracy) + '% accuracy · ' + st.score + ' points';
+    var l2 = document.createElement('div');
+    l2.className = 'muted';
+    l2.textContent = (saved.isNewBest ? 'New best! ' : 'Best: ' + saved.best.score + ' (' + saved.best.grade + '). ') + 'Max combo ' + st.maxCombo + '.';
+    info.appendChild(l1); info.appendChild(l2);
+    big.appendChild(gEl); big.appendChild(info);
+    var counts = document.createElement('div');
+    counts.className = 'counts';
+    [['perfect', st.perfect], ['great', st.great], ['good', st.good], ['miss', st.miss], ['extra', st.extra]].forEach(function (c) {
+      var sp = document.createElement('span');
+      sp.style.color = RATING_COLOR[c[0]];
+      sp.textContent = RATING_TEXT[c[0]] + ' ' + c[1];
+      counts.appendChild(sp);
+    });
+    box.appendChild(big);
+    box.appendChild(counts);
+    var mean = Math.round(st.meanDeltaMs);
+    if (st.hitCount >= 6 && Math.abs(mean) >= 12) {
+      var tip = document.createElement('div');
+      tip.className = 'muted';
+      tip.textContent = 'On average you hit ' + Math.abs(mean) + ' ms ' + (mean > 0 ? 'late' : 'early') + '. If that feels like your setup rather than your playing, shift the latency offset by ' + (mean > 0 ? '+' : '') + mean + ' ms.';
+      var ap = document.createElement('button');
+      ap.className = 'small';
+      ap.style.marginTop = '6px';
+      ap.textContent = 'Apply ' + (mean > 0 ? '+' : '') + mean + ' ms to the offset';
+      ap.onclick = function () {
+        settings.offsetMs = Math.max(-150, Math.min(150, Math.round(settings.offsetMs + mean)));
+        showOffset(); save();
+        ap.disabled = true;
+        ap.textContent = 'Offset is now ' + (settings.offsetMs > 0 ? '+' : '') + settings.offsetMs + ' ms';
+      };
+      box.appendChild(tip);
+      box.appendChild(ap);
+    }
+    updateBest();
+    logLine('sys', 'Game finished: ' + Math.round(st.accuracy) + '% · ' + st.score + ' pts · P' + st.perfect + ' G' + st.great + ' g' + st.good + ' M' + st.miss + ' X' + st.extra + ' · mean ' + mean + ' ms');
+  }
+
+  $('g-play').onclick = function () { startRun('play'); };
+  $('g-listen').onclick = function () { startRun('demo'); };
+  $('g-stop').onclick = stopRun;
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && run && !modalOpen) stopRun();
+  });
+
+  /* ---- drawing the note highway (vertical: notes fall onto the line) */
+  function sizeCanvas() {
+    var cv = $('g-canvas');
+    var dpr = window.devicePixelRatio || 1;
+    var w = cv.clientWidth;
+    var h = cv.clientHeight;
+    var pw = Math.max(1, Math.round(w * dpr));
+    var ph = Math.max(1, Math.round(h * dpr));
+    if (cv.width !== pw || cv.height !== ph) { cv.width = pw; cv.height = ph; }
+    g2.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { w: w, h: h };
+  }
+  var LOOKAHEAD = 2.2;
+  // '#rrggbb' or '#fff' -> 'rgba(r,g,b,a)'
+  function rgba(hex, a) {
+    var h = String(hex || '#4ade80').replace('#', '');
+    if (h.length === 3) h = h.charAt(0) + h.charAt(0) + h.charAt(1) + h.charAt(1) + h.charAt(2) + h.charAt(2);
+    var n = parseInt(h, 16);
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+  function drawScene(t) {
+    var d = sizeCanvas();
+    var W = d.w, H = d.h;
+    var g = g2;
+    g.clearRect(0, 0, W, H);
+    g.fillStyle = '#0b1220';
+    g.fillRect(0, 0, W, H);
+    var trackW = Math.min(260, W * 0.7);
+    var x0 = (W - trackW) / 2;
+    var cx = W / 2;
+    var hitY = H * 0.8;
+    var pps = (hitY + 30) / LOOKAHEAD;
+    g.fillStyle = '#111c30';
+    g.fillRect(x0, 0, trackW, H);
+    g.fillStyle = '#374151';
+    g.fillRect(x0 - 2, 0, 2, H);
+    g.fillRect(x0 + trackW, 0, 2, H);
+    function hitLine() {
+      g.strokeStyle = '#9333ea';
+      g.lineWidth = 4;
+      g.beginPath(); g.moveTo(x0 - 6, hitY); g.lineTo(x0 + trackW + 6, hitY); g.stroke();
+      g.strokeStyle = 'rgba(216,180,254,.8)';
+      g.lineWidth = 2;
+      g.beginPath(); g.arc(cx, hitY, 20, 0, Math.PI * 2); g.stroke();
+    }
+    if (!run || t == null) {
+      hitLine();
+      g.fillStyle = '#9ca3af';
+      g.font = '15px system-ui, sans-serif';
+      g.textAlign = 'center';
+      g.fillText(gSeq ? 'Press Play, or “Listen first”' : 'Load a sequence to begin', cx, H * 0.4);
+      return;
+    }
+    var tl = run.tl;
+    var items = gSeq.items;
+    // beat lines + bar numbers + pattern letters
+    g.font = 'bold 12px system-ui, sans-serif';
+    tl.beats.forEach(function (b) {
+      var y = hitY - (b.time - t) * pps;
+      if (y < -20 || y > H + 20) return;
+      g.strokeStyle = b.isBar ? 'rgba(216,180,254,.75)' : 'rgba(156,163,175,.25)';
+      g.lineWidth = b.isBar ? 2 : 1;
+      g.beginPath(); g.moveTo(x0, y); g.lineTo(x0 + trackW, y); g.stroke();
+      if (!b.countIn) {
+        var it = items[b.index % items.length];
+        g.fillStyle = it.color || '#9ca3af';
+        g.textAlign = 'right';
+        g.fillText(it.label, x0 - 8, y - 4);
+        if (b.isBar) {
+          g.fillStyle = '#d8b4fe';
+          g.textAlign = 'left';
+          g.fillText('bar ' + b.bar, x0 + trackW + 8, y - 4);
+        }
+      }
+    });
+    // notes
+    tl.notes.forEach(function (n) {
+      var y = hitY - (n.time - t) * pps;
+      var judged = run.judge && n.state;
+      if (y < -30 || y > H + 30) return;
+      var age = t - n.time;
+      if (judged && n.state === 'hit') {
+        var a = t - (n.judgedAt == null ? n.time : n.judgedAt);
+        if (a >= 0 && a < 0.35) {
+          g.strokeStyle = RATING_COLOR[n.rating];
+          g.globalAlpha = 1 - a / 0.35;
+          g.lineWidth = 3;
+          g.beginPath(); g.arc(cx, hitY, 16 + a * 90, 0, Math.PI * 2); g.stroke();
+          g.globalAlpha = 1;
+        }
+        return;
+      }
+      if (!run.judge && age >= 0) { // listening: a ring when the note passes the line
+        if (age < 0.3) {
+          g.strokeStyle = n.color;
+          g.globalAlpha = 1 - age / 0.3;
+          g.lineWidth = 3;
+          g.beginPath(); g.arc(cx, hitY, 16 + age * 90, 0, Math.PI * 2); g.stroke();
+          g.globalAlpha = 1;
+        }
+        return;
+      }
+      if (n.state === 'miss') {
+        g.globalAlpha = 0.55;
+        g.fillStyle = RATING_COLOR.miss;
+        g.beginPath(); g.arc(cx, y, 11, 0, Math.PI * 2); g.fill();
+        g.globalAlpha = 1;
+        return;
+      }
+      if (n.type === 'ghost') {
+        g.fillStyle = rgba(n.color, 0.15);
+        g.strokeStyle = rgba(n.color, 0.85);
+        g.lineWidth = 2;
+        g.beginPath(); g.arc(cx, y, 10, 0, Math.PI * 2); g.fill(); g.stroke();
+      } else {
+        g.fillStyle = n.color;
+        g.strokeStyle = n.color === '#ffffff' ? '#6b7280' : 'rgba(255,255,255,.85)';
+        g.lineWidth = 2;
+        g.beginPath(); g.arc(cx, y, 15, 0, Math.PI * 2); g.fill(); g.stroke();
+      }
+    });
+    hitLine();
+    // count-in number
+    if (t < tl.seqStart) {
+      var n = Math.min(tl.countIn, Math.max(1, Math.ceil((tl.seqStart - t) / tl.beat)));
+      g.fillStyle = 'rgba(249,250,251,.9)';
+      g.font = 'bold 72px system-ui, sans-serif';
+      g.textAlign = 'center';
+      g.fillText(tl.countIn ? String(n) : 'Go', cx, H * 0.4);
+    }
+    // last judgment
+    if (run.last) {
+      var la = t - run.last.at;
+      if (la >= 0 && la < 0.8) {
+        g.globalAlpha = 1 - la / 0.8;
+        g.fillStyle = run.last.color;
+        g.font = 'bold 20px system-ui, sans-serif';
+        g.textAlign = 'center';
+        g.fillText(run.last.text, cx, hitY + 52);
+        g.globalAlpha = 1;
+      }
+    }
+  }
+  window.addEventListener('resize', function () { if (!run) drawScene(null); });
+
+  // a link from ABEL (#s=...&t=...&b=...) opens straight into the game
+  $('g-seq').value = gs.seq;
+  if (/[#&]s=/.test(window.location.hash || '')) {
+    loadSequence(window.location.hash, true);
+  } else {
+    loadSequence(gs.seq, false);
+  }
+  // pasting an ABEL link into this tab while the page is already open
+  window.addEventListener('hashchange', function () {
+    if (!run && /[#&]s=/.test(window.location.hash || '')) loadSequence(window.location.hash, true);
+  });
+  updateButtons();
+  window.__abelPlay = { getRun: function () { return run; }, getSequence: function () { return gSeq; }, heardNow: function () { return ctx ? A.perfToAudioTime(ctx, performance.now()) : 0; } };
+
+  /* ---------------------------------------------------------------- start */
+  renderBindings();
+  renderDevices([]);
+  showOffset();
+  logLine('sys', 'ABEL Play input setup ready. Press a bound key (D F J K) to test the sounds.');
+  document.addEventListener('pointerdown', function () { ensureAudio(); }, { once: true });
+};
+</script>
+<script>
+/* ABEL generated sounds (inlined) */
+/* ABEL generated sounds (shared by the ABEL app and ABEL Play).
+   Same synthesis as in index.html: every instrument is rendered once into a buffer so each hit is identical. */
+(function (global) {
+  'use strict';
+  const INSTRUMENTS = {
+    snare: { name: '🥁 Snare Drum', description: 'Warm snare sound (default)' },
+    kick: { name: '🔊 Kick Drum', description: 'Deep bass drum' },
+    hihat: { name: '🎵 Hi-Hat', description: 'Crisp hi-hat sound' },
+    clap: { name: '👏 Clap', description: 'Hand clap percussion' },
+    cowbell: { name: '🔔 Cowbell', description: 'Classic cowbell' },
+    tom: { name: '🪘 Tom', description: 'Mid-range tom drum' },
+    rim: { name: '✨ Rim Shot', description: 'Sharp rim click' },
+    bass: { name: '🎸 Bass', description: 'Deep bass guitar note' }
+  };
+
+  const makeNoise = (ctx, dur) => {
+    const buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    return src;
+  };
+  
+  const playSnare = (ctx, time, vol, dest) => {
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    osc1.frequency.value = 180;
+    osc2.frequency.value = 330;
+    osc1.type = 'triangle';
+    osc2.type = 'triangle';
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0, time);
+    og.gain.linearRampToValueAtTime(0.25 * vol, time + 0.001);
+    og.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+    osc1.connect(og);
+    osc2.connect(og);
+    og.connect(dest);
+  
+    const noise = makeNoise(ctx, 0.15);
+    const f = ctx.createBiquadFilter();
+    f.type = 'highpass';
+    f.frequency.value = 2000;
+    f.Q.value = 1;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0, time);
+    ng.gain.linearRampToValueAtTime(0.35 * vol, time + 0.001);
+    ng.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
+    noise.connect(f);
+    f.connect(ng);
+    ng.connect(dest);
+  
+    osc1.start(time);
+    osc1.stop(time + 0.08);
+    osc2.start(time);
+    osc2.stop(time + 0.08);
+    noise.start(time);
+    noise.stop(time + 0.15);
+  };
+  
+  const playKick = (ctx, time, vol, dest) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.frequency.setValueAtTime(150, time);
+    osc.frequency.exponentialRampToValueAtTime(40, time + 0.1);
+    gain.gain.setValueAtTime(0.8 * vol, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
+    osc.connect(gain);
+    gain.connect(dest);
+    osc.start(time);
+    osc.stop(time + 0.3);
+  };
+  
+  const playHiHat = (ctx, time, vol, dest) => {
+    const noise = makeNoise(ctx, 0.1);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 7000;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.3 * vol, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(dest);
+    noise.start(time);
+    noise.stop(time + 0.1);
+  };
+  
+  const playClap = (ctx, time, vol, dest) => {
+    for (let i = 0; i < 3; i++) {
+      const noise = makeNoise(ctx, 0.08);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 1500;
+      filter.Q.value = 2;
+      const gain = ctx.createGain();
+      const t = time + i * 0.01;
+      gain.gain.setValueAtTime(0.25 * vol, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(dest);
+      noise.start(t);
+      noise.stop(t + 0.08);
+    }
+  };
+  
+  const playCowbell = (ctx, time, vol, dest) => {
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    osc1.frequency.value = 540;
+    osc2.frequency.value = 800;
+    osc1.type = 'square';
+    osc2.type = 'square';
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.3 * vol, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(dest);
+    osc1.start(time);
+    osc1.stop(time + 0.15);
+    osc2.start(time);
+    osc2.stop(time + 0.15);
+  };
+  
+  const playTom = (ctx, time, vol, dest) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.frequency.setValueAtTime(220, time);
+    osc.frequency.exponentialRampToValueAtTime(110, time + 0.15);
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.5 * vol, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
+    osc.connect(gain);
+    gain.connect(dest);
+    osc.start(time);
+    osc.stop(time + 0.2);
+  };
+  
+  const playRimShot = (ctx, time, vol, dest) => {
+    const osc = ctx.createOscillator();
+    osc.frequency.value = 400;
+    osc.type = 'square';
+    const noise = makeNoise(ctx, 0.02);
+    const oscGain = ctx.createGain();
+    const noiseGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(0.2 * vol, time);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, time + 0.02);
+    noiseGain.gain.setValueAtTime(0.4 * vol, time);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, time + 0.015);
+    osc.connect(oscGain);
+    oscGain.connect(dest);
+    noise.connect(noiseGain);
+    noiseGain.connect(dest);
+    osc.start(time);
+    osc.stop(time + 0.02);
+    noise.start(time);
+    noise.stop(time + 0.02);
+  };
+  
+  const playBass = (ctx, time, vol, dest) => {
+    const fundamental = ctx.createOscillator();
+    const harmonic1 = ctx.createOscillator();
+    const harmonic2 = ctx.createOscillator();
+    fundamental.frequency.value = 41.2;
+    harmonic1.frequency.value = 82.4;
+    harmonic2.frequency.value = 123.6;
+    fundamental.type = 'sine';
+    harmonic1.type = 'sine';
+    harmonic2.type = 'sine';
+  
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 600;
+    filter.Q.value = 1;
+  
+    const fg = ctx.createGain();
+    const h1g = ctx.createGain();
+    const h2g = ctx.createGain();
+    const master = ctx.createGain();
+  
+    fg.gain.setValueAtTime(0, time);
+    fg.gain.linearRampToValueAtTime(0.5 * vol, time + 0.01);
+    fg.gain.linearRampToValueAtTime(0.35 * vol, time + 0.05);
+    fg.gain.setValueAtTime(0.35 * vol, time + 0.2);
+    fg.gain.exponentialRampToValueAtTime(0.001, time + 0.4);
+  
+    h1g.gain.setValueAtTime(0, time);
+    h1g.gain.linearRampToValueAtTime(0.2 * vol, time + 0.01);
+    h1g.gain.exponentialRampToValueAtTime(0.001, time + 0.35);
+  
+    h2g.gain.setValueAtTime(0, time);
+    h2g.gain.linearRampToValueAtTime(0.1 * vol, time + 0.01);
+    h2g.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
+  
+    master.gain.value = 0.6;
+  
+    fundamental.connect(fg);
+    harmonic1.connect(h1g);
+    harmonic2.connect(h2g);
+    fg.connect(filter);
+    h1g.connect(filter);
+    h2g.connect(filter);
+    filter.connect(master);
+    master.connect(dest);
+  
+    fundamental.start(time);
+    fundamental.stop(time + 0.4);
+    harmonic1.start(time);
+    harmonic1.stop(time + 0.35);
+    harmonic2.start(time);
+    harmonic2.stop(time + 0.3);
+  };
+  
+  const INSTRUMENT_FN = {
+    snare: playSnare,
+    kick: playKick,
+    hihat: playHiHat,
+    clap: playClap,
+    cowbell: playCowbell,
+    tom: playTom,
+    rim: playRimShot,
+    bass: playBass
+  };
+  
+  // Every instrument is rendered ONCE (same synth, rendered offline into a buffer) so that each
+  // hit is identical: same pitch sweep, same level, same noise, and much lighter on the CPU.
+  const renderSamples = async (ctx) => {
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!OAC) return null;
+    const out = {};
+    try {
+      for (const key of Object.keys(INSTRUMENT_FN)) {
+        const off = new OAC(1, Math.ceil(ctx.sampleRate * 0.5), ctx.sampleRate);
+        INSTRUMENT_FN[key](off, 0, 1, off.destination);
+        out[key] = await off.startRendering();
+      }
+    } catch (e) {
+      return null; // fall back to live synthesis
+    }
+    return out;
+  };
+  
+  
+  global.AbelSounds = { INSTRUMENTS: INSTRUMENTS, INSTRUMENT_FN: INSTRUMENT_FN, renderSamples: renderSamples, makeNoise: makeNoise };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* ABEL input: MIDI, keyboard, bindings, calibration (inlined) */
+/* ABEL Input - MIDI + computer keyboard, bindings (incl. ghost notes), clock conversion, latency calibration.
+   Plain script (no build step). Exposes window.AbelInput. The pure functions are unit-tested. */
+(function (global) {
+  'use strict';
+
+  var STORE_KEY = 'abel:input:v1';
+  var DEFAULT_GHOST_VELOCITY = 0.25;
+  var KINDS = ['key', 'note', 'device'];
+
+  function clamp(v, lo, hi) {
+    v = Number(v);
+    if (!isFinite(v)) return lo;
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  /* ------------------------------------------------------------------ bindings */
+
+  function newId() {
+    return 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+
+  // kind 'key'    : a computer key (code = KeyboardEvent.code, e.g. "KeyD": the physical key, any layout)
+  // kind 'note'   : a MIDI note number (optionally only from one device)
+  // kind 'device' : EVERY note of one MIDI device goes to one voice
+  function makeBinding(partial) {
+    var b = {
+      id: newId(),
+      kind: 'key',
+      voice: 'snare',
+      ghost: false, // ghost note: velocity sensitivity is OFF, the hit always uses fixedVelocity
+      fixedVelocity: DEFAULT_GHOST_VELOCITY,
+      silent: false // ghost hit counts but makes no sound
+    };
+    for (var k in partial) if (Object.prototype.hasOwnProperty.call(partial, k)) b[k] = partial[k];
+    return b;
+  }
+
+  function sanitizeBinding(raw) {
+    if (!raw || typeof raw !== 'object' || KINDS.indexOf(raw.kind) < 0) return null;
+    var b = makeBinding({
+      id: typeof raw.id === 'string' ? raw.id : newId(),
+      kind: raw.kind,
+      voice: typeof raw.voice === 'string' ? raw.voice : 'snare',
+      ghost: !!raw.ghost,
+      fixedVelocity: clamp(raw.fixedVelocity == null ? DEFAULT_GHOST_VELOCITY : raw.fixedVelocity, 0.02, 1),
+      silent: !!raw.silent
+    });
+    if (raw.kind === 'key') {
+      if (typeof raw.code !== 'string' || !raw.code) return null;
+      b.code = raw.code;
+      if (typeof raw.codeLabel === 'string') b.codeLabel = raw.codeLabel;
+    } else if (raw.kind === 'note') {
+      var n = Number(raw.note);
+      if (!(n >= 0 && n <= 127)) return null;
+      b.note = Math.round(n);
+      if (raw.deviceId) b.deviceId = String(raw.deviceId);
+      if (raw.deviceName) b.deviceName = String(raw.deviceName);
+    } else {
+      if (!raw.deviceId && !raw.deviceName) return null;
+      if (raw.deviceId) b.deviceId = String(raw.deviceId);
+      if (raw.deviceName) b.deviceName = String(raw.deviceName);
+    }
+    return b;
+  }
+
+  // The same physical device can get another id on another USB port: the name is the backup identity.
+  function sameDevice(b, ev) {
+    if (b.deviceId && ev.deviceId && b.deviceId === ev.deviceId) return true;
+    return !!(b.deviceName && ev.deviceName && b.deviceName === ev.deviceName);
+  }
+
+  // How specific is this binding for this event? 0 = no match. The most specific binding wins:
+  // key (3) / note on one device (3) > note on any device (2) > whole device (1)
+  function matchScore(b, ev) {
+    if (ev.source === 'key') return b.kind === 'key' && b.code === ev.code ? 3 : 0;
+    if (ev.source === 'midi') {
+      if (b.kind === 'note' && b.note === ev.note) {
+        if (b.deviceId || b.deviceName) return sameDevice(b, ev) ? 3 : 0;
+        return 2;
+      }
+      if (b.kind === 'device' && sameDevice(b, ev)) return 1;
+    }
+    return 0;
+  }
+
+  function resolveBinding(bindings, ev) {
+    var best = null;
+    var bestScore = 0;
+    for (var i = 0; i < bindings.length; i++) {
+      var s = matchScore(bindings[i], ev);
+      if (s > bestScore) {
+        best = bindings[i];
+        bestScore = s;
+      }
+    }
+    return best;
+  }
+
+  // 0..1. A ghost binding ignores how hard you hit; keys have no velocity, so they play at full level.
+  function effectiveVelocity(b, ev) {
+    if (b.ghost) return clamp(b.fixedVelocity, 0.02, 1);
+    if (ev.velocity == null) return 1;
+    return clamp(ev.velocity / 127, 0, 1);
+  }
+
+  function velocityToGain(v) {
+    return Math.max(0.04, Math.pow(clamp(v, 0, 1), 1.4));
+  }
+
+  /* ------------------------------------------------------------------ presets */
+
+  function keyboardStarter() {
+    return [
+      makeBinding({ kind: 'key', code: 'KeyD', codeLabel: 'D', voice: 'snare' }),
+      makeBinding({ kind: 'key', code: 'KeyF', codeLabel: 'F', voice: 'kick' }),
+      makeBinding({ kind: 'key', code: 'KeyJ', codeLabel: 'J', voice: 'hihat' }),
+      makeBinding({ kind: 'key', code: 'KeyK', codeLabel: 'K', voice: 'clap' }),
+      makeBinding({ kind: 'key', code: 'KeyS', codeLabel: 'S', voice: 'snare', ghost: true })
+    ];
+  }
+
+  // General MIDI drum map (what most e-drum kits and pad controllers send)
+  function gmDrumPreset() {
+    var map = [
+      [36, 'kick'], [35, 'kick'], [38, 'snare'], [40, 'snare'], [37, 'rim'], [39, 'clap'],
+      [42, 'hihat'], [44, 'hihat'], [46, 'hihat'], [41, 'tom'], [43, 'tom'], [45, 'tom'], [47, 'tom'], [48, 'tom'], [50, 'tom'],
+      [56, 'cowbell']
+    ];
+    return map.map(function (m) {
+      return makeBinding({ kind: 'note', note: m[0], voice: m[1] });
+    });
+  }
+
+  function sameTarget(a, b) {
+    if (a.kind !== b.kind) return false;
+    if (a.kind === 'key') return a.code === b.code;
+    if (a.kind === 'note') return a.note === b.note && (a.deviceId || '') === (b.deviceId || '');
+    return (a.deviceId || a.deviceName) === (b.deviceId || b.deviceName);
+  }
+
+  // adds the presets' bindings that are not there yet (never overwrites what the person set up)
+  function mergeBindings(existing, extra) {
+    var out = existing.slice();
+    extra.forEach(function (e) {
+      if (!out.some(function (o) { return sameTarget(o, e); })) out.push(e);
+    });
+    return out;
+  }
+
+  function describeBinding(b, voiceNames) {
+    var voice = (voiceNames && voiceNames[b.voice]) || b.voice;
+    var from;
+    if (b.kind === 'key') from = 'Key ' + (b.codeLabel || b.code);
+    else if (b.kind === 'note') from = 'MIDI note ' + b.note + (b.deviceName ? ' on ' + b.deviceName : ' (any device)');
+    else from = 'Whole device: ' + (b.deviceName || b.deviceId);
+    var how = b.ghost
+      ? 'ghost note' + (b.silent ? ', silent' : ', fixed volume ' + Math.round(b.fixedVelocity * 100) + '%')
+      : b.kind === 'key' ? 'full volume' : 'velocity sensitive';
+    return { from: from, to: voice, how: how };
+  }
+
+  /* ------------------------------------------------------------------ storage */
+
+  // localStorage can be blocked (sandboxed preview frames, strict privacy settings): then settings live in memory only
+  var memoryStore = { d: {}, getItem: function (k) { return Object.prototype.hasOwnProperty.call(this.d, k) ? this.d[k] : null; }, setItem: function (k, v) { this.d[k] = String(v); } };
+  function getStore(storage) {
+    if (storage) return storage;
+    try {
+      var ls = global.localStorage;
+      ls.getItem('abel:probe');
+      return ls;
+    } catch (e) {
+      return memoryStore;
+    }
+  }
+
+  function loadSettings(storage) {
+    var st = getStore(storage);
+    var out = { bindings: null, offsetMs: 0 };
+    try {
+      var raw = JSON.parse(st.getItem(STORE_KEY) || 'null');
+      if (raw && typeof raw === 'object') {
+        if (Array.isArray(raw.bindings)) {
+          out.bindings = raw.bindings.map(sanitizeBinding).filter(Boolean);
+        }
+        out.offsetMs = clamp(raw.offsetMs || 0, -300, 300);
+      }
+    } catch (e) {
+      /* unreadable: start fresh */
+    }
+    return out;
+  }
+
+  function saveSettings(settings, storage) {
+    var st = getStore(storage);
+    var json = JSON.stringify({ bindings: settings.bindings, offsetMs: settings.offsetMs });
+    try {
+      st.setItem(STORE_KEY, json);
+      return true;
+    } catch (e) {
+      try { memoryStore.setItem(STORE_KEY, json); } catch (e2) { /* ignore */ }
+      return false;
+    }
+  }
+
+  /* ------------------------------------------------------------------ MIDI parsing */
+
+  // data = the raw MIDI bytes
+  function parseMidi(data) {
+    if (!data || data.length < 1) return { type: 'empty' };
+    var status = data[0];
+    if (status >= 0xf8) return { type: 'realtime' }; // clock, active sensing...: constant noise, never shown
+    if (status >= 0xf0) return { type: 'system' };
+    var kind = status & 0xf0;
+    var channel = (status & 0x0f) + 1;
+    var d1 = data[1] | 0;
+    var d2 = data[2] | 0;
+    if (kind === 0x90) return d2 > 0 ? { type: 'noteon', channel: channel, note: d1, velocity: d2 } : { type: 'noteoff', channel: channel, note: d1 };
+    if (kind === 0x80) return { type: 'noteoff', channel: channel, note: d1 };
+    if (kind === 0xb0) return { type: 'cc', channel: channel, cc: d1, value: d2 };
+    if (kind === 0xa0) return { type: 'aftertouch', channel: channel, note: d1, value: d2 };
+    if (kind === 0xd0) return { type: 'aftertouch', channel: channel, value: d1 };
+    if (kind === 0xe0) return { type: 'pitchbend', channel: channel, value: ((d2 << 7) | d1) - 8192 };
+    if (kind === 0xc0) return { type: 'program', channel: channel, value: d1 };
+    return { type: 'other' };
+  }
+
+  /* ------------------------------------------------------------------ MIDI manager (hot-plug) */
+
+  // opts: onHit(ev), onOther(info), onDevices(list), onLog(text), navigator (for tests)
+  function createMidiManager(opts) {
+    var nav = opts.navigator || global.navigator;
+    var access = null;
+    var status = 'idle'; // idle | unsupported | blocked | denied | error | ready
+    var devices = [];
+
+    function log(t) {
+      if (opts.onLog) opts.onLog(t);
+    }
+
+    function describePort(port) {
+      return {
+        id: port.id,
+        name: port.name || 'MIDI device',
+        manufacturer: port.manufacturer || '',
+        state: port.state,
+        connection: port.connection
+      };
+    }
+
+    function onMessage(e) {
+      var port = e.target || {};
+      var info = parseMidi(e.data);
+      var deviceId = port.id || '';
+      var deviceName = port.name || 'MIDI device';
+      if (info.type === 'noteon') {
+        if (opts.onHit) {
+          opts.onHit({
+            source: 'midi',
+            deviceId: deviceId,
+            deviceName: deviceName,
+            note: info.note,
+            velocity: info.velocity,
+            channel: info.channel,
+            timeStamp: typeof e.timeStamp === 'number' ? e.timeStamp : performance.now()
+          });
+        }
+      } else if (info.type !== 'realtime' && info.type !== 'empty') {
+        if (opts.onOther) opts.onOther({ info: info, deviceId: deviceId, deviceName: deviceName });
+      }
+    }
+
+    function refresh() {
+      var list = [];
+      if (access) {
+        // (re)attach the listener to every input: this is what makes plugging in a device later just work
+        access.inputs.forEach(function (input) {
+          input.onmidimessage = onMessage;
+          list.push(describePort(input));
+        });
+      }
+      devices = list;
+      if (opts.onDevices) opts.onDevices(list);
+    }
+
+    function enable() {
+      if (!nav || typeof nav.requestMIDIAccess !== 'function') {
+        status = 'unsupported';
+        log('Web MIDI is not available in this browser.');
+        return Promise.resolve(status);
+      }
+      return nav.requestMIDIAccess({ sysex: false }).then(
+        function (a) {
+          access = a;
+          status = 'ready';
+          access.onstatechange = function (e) {
+            var p = e && e.port;
+            if (p && p.type === 'input') {
+              log('MIDI ' + (p.state === 'connected' ? 'connected' : 'disconnected') + ': ' + (p.name || 'device'));
+            }
+            refresh();
+          };
+          refresh();
+          log('MIDI ready: ' + devices.length + ' input device(s) found.');
+          return status;
+        },
+        function (err) {
+          var name = err && err.name;
+          status = name === 'SecurityError' ? 'blocked' : name === 'NotAllowedError' ? 'denied' : 'error';
+          log('MIDI could not start (' + (name || 'error') + ').');
+          return status;
+        }
+      );
+    }
+
+    return {
+      enable: enable,
+      getStatus: function () { return status; },
+      getDevices: function () { return devices.slice(); }
+    };
+  }
+
+  /* ------------------------------------------------------------------ clock conversion & calibration */
+
+  // Converts a browser event time (performance.now() domain: event.timeStamp) to the time on the audio clock
+  // at which that moment is HEARD. Same approach as the ABEL app's animation clock.
+  function perfToAudioTime(ctx, perfMs) {
+    try {
+      if (typeof ctx.getOutputTimestamp === 'function') {
+        var ts = ctx.getOutputTimestamp();
+        if (ts && ts.contextTime > 0 && ts.performanceTime > 0) {
+          var heardNow = ts.contextTime + (performance.now() - ts.performanceTime) / 1000;
+          if (heardNow <= ctx.currentTime + 0.02 && heardNow >= ctx.currentTime - 0.6) {
+            return ts.contextTime + (perfMs - ts.performanceTime) / 1000;
+          }
+        }
+      }
+    } catch (e) {
+      /* fall back below */
+    }
+    return ctx.currentTime - (performance.now() - perfMs) / 1000 - Math.min(ctx.outputLatency || 0, 0.5);
+  }
+
+  function median(arr) {
+    if (!arr.length) return 0;
+    var a = arr.slice().sort(function (x, y) { return x - y; });
+    var m = Math.floor(a.length / 2);
+    return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+  }
+
+  // clickTimes / hitTimes in seconds on the same clock. Each hit is matched to its nearest click
+  // (within maxSec); a click is used at most once. Result in milliseconds: positive = you hit LATE.
+  function computeOffsets(clickTimes, hitTimes, maxSec) {
+    var limit = maxSec == null ? 0.25 : maxSec;
+    var used = {};
+    var offsets = [];
+    hitTimes.forEach(function (h) {
+      var bestI = -1;
+      var bestD = Infinity;
+      for (var i = 0; i < clickTimes.length; i++) {
+        var d = Math.abs(h - clickTimes[i]);
+        if (d < bestD) {
+          bestD = d;
+          bestI = i;
+        }
+      }
+      if (bestI >= 0 && bestD <= limit && !used[bestI]) {
+        used[bestI] = true;
+        offsets.push((h - clickTimes[bestI]) * 1000);
+      }
+    });
+    var med = median(offsets);
+    var dev = median(offsets.map(function (o) { return Math.abs(o - med); }));
+    return { offsetsMs: offsets, medianMs: med, spreadMs: dev, count: offsets.length };
+  }
+
+  global.AbelInput = {
+    STORE_KEY: STORE_KEY,
+    DEFAULT_GHOST_VELOCITY: DEFAULT_GHOST_VELOCITY,
+    makeBinding: makeBinding,
+    sanitizeBinding: sanitizeBinding,
+    matchScore: matchScore,
+    resolveBinding: resolveBinding,
+    effectiveVelocity: effectiveVelocity,
+    velocityToGain: velocityToGain,
+    keyboardStarter: keyboardStarter,
+    gmDrumPreset: gmDrumPreset,
+    mergeBindings: mergeBindings,
+    describeBinding: describeBinding,
+    loadSettings: loadSettings,
+    saveSettings: saveSettings,
+    parseMidi: parseMidi,
+    createMidiManager: createMidiManager,
+    perfToAudioTime: perfToAudioTime,
+    computeOffsets: computeOffsets,
+    median: median
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* ABEL game: sequence parsing, note timeline, judging (inlined) */
+/* ABEL Game - sequence parsing, note timeline, hit judging, scoring. Plain script (no build step).
+   Exposes window.AbelGame. Everything except the drawing is pure logic and unit-tested.
+
+   Timing follows the ABEL app exactly: every pattern of the sequence lasts ONE beat, and its symbols
+   split that beat evenly (a pattern with 4 symbols = four notes per beat). A fused pattern (F+K) is
+   still one beat, divided into all of its symbols. */
+(function (global) {
+  'use strict';
+
+  // letter -> rhythm (1 = sound, 0 = rest). Same table as the ABEL app.
+  var PATTERN_BINARY = {"A'":"0","A":"1","B'":"00","B":"11","C":"10","D":"01","E'":"000","E":"111","F":"100","G":"010","H":"001","I":"110","J":"011","K":"101","L'":"0000","L":"1111","M":"1000","N":"0100","O":"0010","P":"0001","Q":"1100","R":"0110","S":"0011","T":"1001","U":"1010","V":"0101","W":"1110","X":"0111","Y":"1011","Z":"1101"};
+
+  // colour of each pattern, exactly as in the ABEL app ('#2d2d2d' = the dark "rest" patterns, drawn light grey)
+  var PATTERN_COLOR = {"A'":"#2d2d2d","A":"#4ade80","B'":"#2d2d2d","B":"#eab308","C":"#4ade80","D":"#ef4444","E'":"#2d2d2d","E":"#fff","F":"#4ade80","G":"#fff","H":"#fff","I":"#fff","J":"#fff","K":"#fff","L'":"#2d2d2d","L":"#fff","M":"#4ade80","N":"#fff","O":"#ef4444","P":"#fff","Q":"#fff","R":"#fff","S":"#fff","T":"#fff","U":"#eab308","V":"#fff","W":"#fff","X":"#fff","Y":"#fff","Z":"#fff"};
+  var FUSED_COLOR = '#60a5fa'; // a fused pattern is blue in ABEL
+  function accentColor(raw) {
+    if (raw === '#2d2d2d') return '#9ca3af';
+    if (raw === '#fff') return '#ffffff';
+    return raw;
+  }
+
+  var RATING_POINTS = { perfect: 100, great: 70, good: 40, miss: 0 };
+  var RATING_WEIGHT = { perfect: 1, great: 0.7, good: 0.4, miss: 0 };
+  var BASE_WINDOWS_MS = { perfect: 35, great: 70, good: 110 };
+  var DIFFICULTY = {
+    easy: { label: 'Easy', scale: 1.5 },
+    normal: { label: 'Normal', scale: 1 },
+    strict: { label: 'Strict', scale: 0.7 }
+  };
+
+  function clamp(v, lo, hi) {
+    v = Number(v);
+    if (!isFinite(v)) return lo;
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  function windowsFor(difficulty) {
+    var d = DIFFICULTY[difficulty] || DIFFICULTY.normal;
+    return {
+      perfect: (BASE_WINDOWS_MS.perfect * d.scale) / 1000,
+      great: (BASE_WINDOWS_MS.great * d.scale) / 1000,
+      good: (BASE_WINDOWS_MS.good * d.scale) / 1000
+    };
+  }
+
+  /* ------------------------------------------------------------------ parsing */
+
+  function normalizeLetter(tok) {
+    var t = String(tok).replace(/[\u2019\u2018\u02bc`\u00b4]/g, "'").trim();
+    if (!t) return '';
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+
+  // Accepts: a code ("A,B',F+K,D"), an ABEL share link (https://.../#s=A%2CB&t=100&b=4), "#s=...", or "s=...&t=..."
+  function parseSequence(text) {
+    var res = { items: [], tempo: null, beats: null, errors: [] };
+    var raw = String(text == null ? '' : text).trim();
+    if (!raw) {
+      res.errors.push('Type a sequence or paste an ABEL share link.');
+      return res;
+    }
+    var codeStr = raw;
+    var params = null;
+    var h = raw.indexOf('#');
+    if (h >= 0) params = raw.slice(h + 1);
+    else if (/(^|[?&])s=/.test(raw)) params = raw.replace(/^[^?]*\?/, '');
+    if (params != null) {
+      var p;
+      try {
+        p = new URLSearchParams(params);
+      } catch (e) {
+        p = null;
+      }
+      var s = p ? p.get('s') : null;
+      if (s == null) {
+        res.errors.push('This link does not contain a sequence.');
+        return res;
+      }
+      codeStr = s.replace(/\s+/g, '+'); // a raw "+" in a link turns into a space
+      if (p.get('t')) res.tempo = clamp(p.get('t'), 30, 240);
+      if (p.get('b')) res.beats = Math.round(clamp(p.get('b'), 1, 16));
+    }
+    var tokens = codeStr.split(/[,;\s]+/).filter(Boolean);
+    tokens.forEach(function (tok) {
+      var parts = tok.split('+').map(normalizeLetter).filter(Boolean);
+      if (!parts.length) return;
+      var bad = parts.filter(function (l) { return !Object.prototype.hasOwnProperty.call(PATTERN_BINARY, l); });
+      if (bad.length) {
+        res.errors.push('Unknown pattern: ' + bad.join(', '));
+        return;
+      }
+      res.items.push({
+        label: parts.join('+'),
+        binary: parts.map(function (l) { return PATTERN_BINARY[l]; }).join(''),
+        color: parts.length > 1 ? FUSED_COLOR : accentColor(PATTERN_COLOR[parts[0]])
+      });
+    });
+    if (!res.items.length && !res.errors.length) res.errors.push('No pattern found.');
+    return res;
+  }
+
+  /* ------------------------------------------------------------------ timeline */
+
+  // opts: items, loops, tempo, beatsPerBar, countInBeats, ghostRests, startTime (audio clock, seconds)
+  function buildTimeline(opts) {
+    var items = opts.items;
+    var loops = Math.max(1, Math.round(opts.loops || 1));
+    var tempo = clamp(opts.tempo || 80, 20, 300);
+    var bpb = Math.max(1, Math.round(opts.beatsPerBar || 4));
+    var countIn = opts.countInBeats == null ? bpb : Math.max(0, Math.round(opts.countInBeats));
+    var start = opts.startTime || 0;
+    var beat = 60 / tempo;
+    var seqStart = start + countIn * beat;
+    var totalBeats = items.length * loops;
+    var notes = [];
+    var beats = [];
+    var b;
+    for (b = -countIn; b < totalBeats; b++) {
+      beats.push({
+        index: b,
+        time: seqStart + b * beat,
+        countIn: b < 0,
+        isBar: (((b % bpb) + bpb) % bpb) === 0,
+        bar: b >= 0 ? Math.floor(b / bpb) + 1 : 0
+      });
+    }
+    for (var L = 0; L < loops; L++) {
+      for (var k = 0; k < items.length; k++) {
+        var bi = L * items.length + k;
+        var bt = seqStart + bi * beat;
+        var bin = items[k].binary;
+        var n = bin.length;
+        for (var i = 0; i < n; i++) {
+          var isSound = bin.charAt(i) === '1';
+          if (!isSound && !opts.ghostRests) continue;
+          notes.push({
+            time: bt + (i * beat) / n,
+            beatIndex: bi,
+            item: k,
+            loop: L,
+            step: i,
+            n: n,
+            type: isSound ? 'accent' : 'ghost',
+            color: items[k].color || '#4ade80',
+            state: null,
+            rating: null,
+            deltaMs: null,
+            judgedAt: null
+          });
+        }
+      }
+    }
+    return { notes: notes, beats: beats, beat: beat, seqStart: seqStart, start: start, endTime: seqStart + totalBeats * beat, totalBeats: totalBeats, countIn: countIn, beatsPerBar: bpb };
+  }
+
+  /* ------------------------------------------------------------------ judging */
+
+  // o: notes, windows ({perfect,great,good} in seconds), offsetSec (input latency compensation: positive = you tend to hit late)
+  function createJudge(o) {
+    var notes = o.notes;
+    var w = o.windows;
+    var offset = o.offsetSec || 0;
+    var st = { perfect: 0, great: 0, good: 0, miss: 0, extra: 0, combo: 0, maxCombo: 0, score: 0, weight: 0, deltaSum: 0, deltaCount: 0 };
+
+    function multiplier() {
+      return 1 + Math.min(Math.floor(st.combo / 10), 10) * 0.1; // up to x2.0
+    }
+    function setJudged(note, rating, deltaMs, at) {
+      note.state = rating === 'miss' ? 'miss' : 'hit';
+      note.rating = rating;
+      note.deltaMs = deltaMs;
+      note.judgedAt = at;
+      st[rating]++;
+      st.weight += RATING_WEIGHT[rating];
+      if (rating === 'miss') {
+        st.combo = 0;
+      } else {
+        st.score += Math.round(RATING_POINTS[rating] * multiplier());
+        st.combo++;
+        if (st.combo > st.maxCombo) st.maxCombo = st.combo;
+        st.deltaSum += deltaMs;
+        st.deltaCount++;
+      }
+    }
+
+    // timeSec: when the hit was heard on the audio clock. isGhost: the hit came from a ghost binding.
+    function hit(timeSec, isGhost) {
+      var adj = timeSec - offset;
+      var best = null;
+      var bestAbs = Infinity;
+      for (var i = 0; i < notes.length; i++) {
+        var n = notes[i];
+        if (n.state) continue;
+        if ((n.type === 'ghost') !== !!isGhost) continue;
+        var d = Math.abs(n.time - adj);
+        if (d <= w.good && d < bestAbs) {
+          best = n;
+          bestAbs = d;
+        }
+      }
+      if (!best) {
+        st.extra++;
+        st.combo = 0;
+        return { kind: 'extra' };
+      }
+      var rating = bestAbs <= w.perfect ? 'perfect' : bestAbs <= w.great ? 'great' : 'good';
+      var deltaMs = (adj - best.time) * 1000;
+      setJudged(best, rating, deltaMs, timeSec);
+      return { kind: 'hit', rating: rating, deltaMs: deltaMs, note: best };
+    }
+
+    // marks the notes whose last chance has passed as missed; returns them
+    function sweep(nowSec) {
+      var adj = nowSec - offset;
+      var out = [];
+      for (var i = 0; i < notes.length; i++) {
+        var n = notes[i];
+        if (!n.state && n.time + w.good < adj) {
+          setJudged(n, 'miss', null, nowSec);
+          out.push(n);
+        }
+      }
+      return out;
+    }
+
+    function finish() {
+      return sweep(Infinity);
+    }
+
+    function stats() {
+      var judged = st.perfect + st.great + st.good + st.miss;
+      var denom = judged + st.extra;
+      return {
+        perfect: st.perfect, great: st.great, good: st.good, miss: st.miss, extra: st.extra,
+        combo: st.combo, maxCombo: st.maxCombo, score: st.score,
+        total: notes.length, judged: judged,
+        accuracy: denom ? (st.weight / denom) * 100 : 0,
+        meanDeltaMs: st.deltaCount ? st.deltaSum / st.deltaCount : 0,
+        hitCount: st.deltaCount
+      };
+    }
+
+    return { hit: hit, sweep: sweep, finish: finish, stats: stats };
+  }
+
+  function grade(accuracy) {
+    return accuracy >= 95 ? 'S' : accuracy >= 85 ? 'A' : accuracy >= 70 ? 'B' : accuracy >= 50 ? 'C' : 'D';
+  }
+
+  /* ------------------------------------------------------------------ best scores (saved on this device) */
+
+  var SCORES_KEY = 'abel:play:scores:v1';
+  var memoryStore = { d: {}, getItem: function (k) { return Object.prototype.hasOwnProperty.call(this.d, k) ? this.d[k] : null; }, setItem: function (k, v) { this.d[k] = String(v); } };
+  function getStore(storage) {
+    if (storage) return storage;
+    try {
+      var ls = global.localStorage;
+      ls.getItem('abel:probe');
+      return ls;
+    } catch (e) {
+      return memoryStore;
+    }
+  }
+
+  function scoreKey(items, o) {
+    return items.map(function (i) { return i.label; }).join(',') + '|' + o.tempo + '|' + o.loops + '|' + o.difficulty + '|' + (o.ghostRests ? 'g' : '-');
+  }
+  function loadBest(key, storage) {
+    try {
+      var all = JSON.parse(getStore(storage).getItem(SCORES_KEY) || '{}');
+      return all && all[key] ? all[key] : null;
+    } catch (e) {
+      return null;
+    }
+  }
+  // returns { isNewBest, best }
+  function saveBest(key, result, storage) {
+    var st = getStore(storage);
+    var all = {};
+    try {
+      all = JSON.parse(st.getItem(SCORES_KEY) || '{}') || {};
+    } catch (e) {
+      all = {};
+    }
+    var prev = all[key] || null;
+    var isNew = !prev || result.score > prev.score;
+    var next = {
+      score: isNew ? result.score : prev.score,
+      accuracy: isNew ? result.accuracy : prev.accuracy,
+      grade: isNew ? result.grade : prev.grade,
+      plays: (prev ? prev.plays : 0) + 1
+    };
+    all[key] = next;
+    var keys = Object.keys(all);
+    if (keys.length > 200) delete all[keys[0]]; // keep the store small
+    try {
+      st.setItem(SCORES_KEY, JSON.stringify(all));
+    } catch (e) {
+      /* blocked: the score still shows on screen */
+    }
+    return { isNewBest: isNew, best: next };
+  }
+
+  global.AbelGame = {
+    PATTERN_BINARY: PATTERN_BINARY,
+    PATTERN_COLOR: PATTERN_COLOR,
+    accentColor: accentColor,
+    DIFFICULTY: DIFFICULTY,
+    windowsFor: windowsFor,
+    parseSequence: parseSequence,
+    buildTimeline: buildTimeline,
+    createJudge: createJudge,
+    grade: grade,
+    scoreKey: scoreKey,
+    loadBest: loadBest,
+    saveBest: saveBest
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+(function () {
+  var box = document.getElementById('load-error');
+  window.addEventListener('error', function (e) {
+    if (e && e.target && e.target !== window) return;
+    box.hidden = false;
+    box.innerHTML = '<b>Something went wrong:</b> ' + String(e && e.message ? e.message : 'unknown error').replace(/</g, '&lt;') +
+      '<br>Please copy this message and send it to me.';
+  });
+  window.__startPlay();
+})();
+</script>
+</body>
+</html>
