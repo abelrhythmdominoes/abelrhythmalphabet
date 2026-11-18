@@ -121,7 +121,7 @@
   details.card > summary .t { font-size: 1.1rem; font-weight: 700; }
   details.card > summary .muted { flex: 1 1 200px; }
   details.card > .body { padding: 0 14px 14px; }
-  @media (prefers-reduced-motion: reduce) { .pad, details.card > summary::before { transition: none; } .pad.flash, .tappad.down { transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .pad, details.card > summary::before { transition: none; } .pad.flash, .tappad.down { transform: none; } button.switch, button.switch::after { transition: none; } }
   .copybox { width: 100%; margin-top: 8px; background: var(--deep); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: 12px ui-monospace, Consolas, monospace; }
   /* page header: tools, site link, copyright (same look as the home page) */
   .topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
@@ -150,6 +150,18 @@
   html[data-theme="light"] .msg.warn { border-color: #f59e0b; }
   html[data-theme="light"] .msg.bad { border-color: #fca5a5; }
   html[data-theme="light"] .overlay { background: rgba(17, 24, 39, .45); }
+  /* green on/off switch, same look as the home page */
+  .switchrow { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+  .switchrow > span { cursor: pointer; }
+  .switchrow.off > span { cursor: default; }
+  .na { display: block; font-size: .8rem; }
+  .na[hidden] { display: none; }
+  button.switch { position: relative; flex: 0 0 auto; width: 44px; height: 24px; min-height: 0; padding: 0; border-radius: 999px; background: #4b5563; transition: background .15s; }
+  button.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .15s; }
+  button.switch[aria-checked="true"] { background: #22c55e; }
+  button.switch[aria-checked="true"]::after { transform: translateX(20px); }
+  button.switch:disabled { opacity: .4; cursor: not-allowed; }
+  html[data-theme="light"] button.switch:not([aria-checked="true"]) { background: #9ca3af; }
   .counts { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0; font-weight: 700; }
 </style>
 </head>
@@ -201,6 +213,10 @@
     <div id="g-ghost-note" class="msg" hidden>Ghost notes: tap the small <b>soft tap</b> pad (on the <span id="g-side">right</span>) for the rests, and the big pad for the notes.</div>
     <label class="check"><input type="checkbox" id="g-pad-on"> Show a tap pad on the screen (for phones and tablets without a keyboard or MIDI pad)</label>
     <label class="check" id="g-flip-wrap" hidden><input type="checkbox" id="g-flip"> Swap tap pads</label>
+    <div class="switchrow" id="haptic-row">
+      <button id="btn-haptic" class="switch" type="button" role="switch" aria-checked="true" aria-label="Haptic feedback"></button>
+      <span id="haptic-text">Haptic feedback (vibrate on beats and notes)<span id="haptic-na" class="muted na" hidden>Not supported on this device or browser</span></span>
+    </div>
 
     <div class="row actions" style="margin-top:14px">
       <button id="g-play" class="primary" disabled>▶ Play</button>
@@ -405,6 +421,37 @@ window.__startPlay = function () {
       copy();
     }
   };
+
+  /* ---------------------------------------------------------------- haptics */
+  // Same preference as the home page (key "abel:haptics"), on by default.
+  var HAPTIC_KEY = 'abel:haptics';
+  var HAPTIC_MS = { 1: 6, 2: 14, 3: 24, 4: 42 }; // 1 ghost note, 2 note, 3 beat, 4 first beat of the bar (pulse length in ms)
+  var hapticsSupported = typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
+  var hapticsOn = true;
+  try { var hv = window.localStorage.getItem(HAPTIC_KEY); if (hv !== null) hapticsOn = hv === '1'; } catch (e) { /* default */ }
+  function safeVibrate(p) {
+    try { if (hapticsSupported) return navigator.vibrate(p); } catch (e) { /* never let haptics break the game */ }
+    return false;
+  }
+  function hapticsActive() { return hapticsOn && hapticsSupported; }
+  function showHaptics() {
+    var on = hapticsActive();
+    var b = $('btn-haptic');
+    b.setAttribute('aria-checked', on ? 'true' : 'false');
+    b.disabled = !hapticsSupported;
+    $('haptic-row').classList.toggle('off', !hapticsSupported);
+    $('haptic-na').hidden = hapticsSupported;
+  }
+  function toggleHaptics() {
+    if (!hapticsSupported) return;
+    hapticsOn = !hapticsOn;
+    safeVibrate(hapticsOn ? 30 : 0); // short confirmation buzz when switched on
+    try { window.localStorage.setItem(HAPTIC_KEY, hapticsOn ? '1' : '0'); } catch (e) { /* not saved */ }
+    showHaptics();
+  }
+  $('btn-haptic').onclick = toggleHaptics;
+  $('haptic-text').onclick = toggleHaptics;
+  showHaptics();
 
   /* ---------------------------------------------------------------- settings */
   var settings = A.loadSettings();
@@ -645,7 +692,7 @@ window.__startPlay = function () {
     var silent = b.ghost && b.silent;
     var played = silent ? true : playVoice(b.voice, v);
     flashPad(b.voice);
-    if (run && run.mode === 'play' && run.judge) gameHit(ev, b);
+    if (run && run.mode === 'play' && run.judge) { gameHit(ev, b); if (hapticsActive()) safeVibrate(HAPTIC_MS[b.ghost ? 1 : 2]); }
     logLine('hit', fmtEvent(ev) + '  → ' + (VOICE_NAMES[b.voice] || b.voice) + ' ' + Math.round(v * 100) + '%' + (b.ghost ? ' (ghost' + (silent ? ', silent' : '') + ')' : '') + (played ? '' : '  [audio not running: click the page]') + stampText);
     return true;
   }
@@ -1167,7 +1214,7 @@ window.__startPlay = function () {
       if (mode === 'demo') tl.notes.forEach(function (n) { playAt(n.time, gs.voice, n.type === 'ghost' ? 0.12 : 1, gain); });
       var windows = G.windowsFor(gs.difficulty);
       run = {
-        mode: mode, tl: tl, gain: gain, windows: windows, last: null, raf: 0, heard: 0,
+        mode: mode, tl: tl, gain: gain, windows: windows, last: null, raf: 0, heard: 0, hb: 0, hn: 0,
         judge: mode === 'play' ? G.createJudge({ notes: tl.notes, windows: windows, offsetSec: settings.offsetMs / 1000 }) : null
       };
       $('g-result').hidden = true;
@@ -1186,6 +1233,7 @@ window.__startPlay = function () {
     cancelAnimationFrame(run.raf);
     try { run.gain.disconnect(); } catch (e) { /* ignore */ }
     run = null;
+    safeVibrate(0);
     updateButtons();
     updateHud();
     drawScene(null);
@@ -1195,6 +1243,7 @@ window.__startPlay = function () {
     if (!run) return;
     var heard = A.perfToAudioTime(ctx, performance.now());
     run.heard = heard;
+    if (hapticsActive()) fireHaptics(heard);
     if (run.judge) {
       var missed = run.judge.sweep(heard);
       if (missed.length) {
@@ -1205,6 +1254,24 @@ window.__startPlay = function () {
     drawScene(heard);
     if (heard > run.tl.endTime + 0.5) { finishRun(); return; }
     run.raf = requestAnimationFrame(frame);
+  }
+
+  // beats (as the metronome is heard) and, when listening, the notes: pulse length = importance
+  function fireHaptics(heard) {
+    var tl = run.tl;
+    var level = 0;
+    var fresh = function (t) { return heard - t <= 0.12; }; // never replay old pulses (tab was in the background, etc.)
+    while (run.hb < tl.beats.length && tl.beats[run.hb].time <= heard) {
+      var bt = tl.beats[run.hb++];
+      if (fresh(bt.time) && (bt.countIn || gs.metro || run.mode === 'demo')) level = Math.max(level, bt.isBar ? 4 : 3);
+    }
+    if (run.mode === 'demo') {
+      while (run.hn < tl.notes.length && tl.notes[run.hn].time <= heard) {
+        var nt = tl.notes[run.hn++];
+        if (fresh(nt.time)) level = Math.max(level, nt.type === 'ghost' ? 1 : 2);
+      }
+    }
+    if (level) safeVibrate(HAPTIC_MS[level]);
   }
 
   function gameHit(ev, b) {
