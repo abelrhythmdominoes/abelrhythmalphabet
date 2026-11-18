@@ -6,6 +6,43 @@
 <meta name="theme-color" content="#111827">
 <title>ABEL Play – Input setup</title>
 <script>
+/* ABEL Speed Trainer: pure planning logic (no DOM, no audio). Exposes window.AbelSpeed.
+   plan() turns the four inputs into one tempo per sequence loop. The game builds its whole timeline
+   from that list on the audio clock, so tempo changes land exactly on loop boundaries and never drift. */
+(function (global) {
+  'use strict';
+  var MIN_BPM = 40, MAX_BPM = 200, MAX_LEVELS = 80, MAX_LOOPS = 400;
+  function clampBpm(v) {
+    v = Number(v);
+    if (!isFinite(v)) v = 80;
+    return Math.max(MIN_BPM, Math.min(MAX_BPM, Math.round(v)));
+  }
+  // o: { startBPM, targetBPM, bpmStep (+ or -), loopsPerStep }
+  // The step always moves TOWARD the target (its sign is just a hint), and the last step lands exactly on the target.
+  // The run ends after the target tempo has been played loopsPerStep times. A step of 0 keeps startBPM.
+  function plan(o) {
+    var start = clampBpm(o.startBPM);
+    var target = clampBpm(o.targetBPM);
+    var step = Math.abs(Number(o.bpmStep) || 0);
+    var per = Math.max(1, Math.min(50, Math.round(Number(o.loopsPerStep)) || 1));
+    var levels = [start];
+    if (step > 0) {
+      var up = target >= start;
+      var cur = start;
+      while (cur !== target && levels.length < MAX_LEVELS) {
+        cur = up ? Math.min(target, cur + step) : Math.max(target, cur - step);
+        levels.push(cur);
+      }
+    }
+    while (levels.length * per > MAX_LOOPS) per--;
+    var tempos = [];
+    levels.forEach(function (bpm) { for (var i = 0; i < per; i++) tempos.push(bpm); });
+    return { levels: levels, loopsPerStep: per, tempos: tempos, totalLoops: tempos.length, start: start, target: levels[levels.length - 1] };
+  }
+  global.AbelSpeed = { MIN_BPM: MIN_BPM, MAX_BPM: MAX_BPM, clampBpm: clampBpm, plan: plan };
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>
   // same saved preference as the home page (key "abel:theme"); dark is the default
   (function () {
     var light = false;
@@ -210,6 +247,14 @@
       <div><label class="t" for="g-view">Display</label><select id="g-view"></select></div>
       <div><label class="t" for="g-voice">Sound for “Listen first” and the tap pad</label><select id="g-voice"></select></div>
     </div>
+    <label class="check"><input type="checkbox" id="g-st-on"> Speed Trainer: change the tempo step by step</label>
+    <div class="sgrid" id="g-st-box" hidden>
+      <div><label class="t" for="g-st-start">Start BPM</label><input id="g-st-start" type="number" min="40" max="200" step="1" inputmode="numeric" style="width:100%;font:inherit;padding:8px"></div>
+      <div><label class="t" for="g-st-target">Target BPM</label><input id="g-st-target" type="number" min="40" max="200" step="1" inputmode="numeric" style="width:100%;font:inherit;padding:8px"></div>
+      <div><label class="t" for="g-st-step">BPM step (+ faster, − slower)</label><input id="g-st-step" type="number" step="1" inputmode="numeric" style="width:100%;font:inherit;padding:8px"></div>
+      <div><label class="t" for="g-st-per">Sequences per step</label><input id="g-st-per" type="number" min="1" max="50" step="1" inputmode="numeric" style="width:100%;font:inherit;padding:8px"></div>
+      <div class="muted" id="g-st-sum" style="grid-column:1/-1"></div>
+    </div>
     <label class="check"><input type="checkbox" id="g-metro" checked> Metronome clicks during the game</label>
     <label class="check"><input type="checkbox" id="g-ghost"> Ghost notes (play them with a ghost key or pad)</label>
     <div id="g-ghost-note" class="msg" hidden>Ghost notes: tap the small <b>soft tap</b> pad (on the <span id="g-side">right</span>) for the rests, and the big pad for the notes.</div>
@@ -230,6 +275,7 @@
       <div><div class="v" id="g-hud-score">0</div><div class="k">Score</div></div>
       <div><div class="v" id="g-hud-combo">0</div><div class="k">Combo</div></div>
       <div><div class="v" id="g-hud-acc">—</div><div class="k">Accuracy</div></div>
+      <div><div class="v" id="g-hud-bpm">—</div><div class="k">BPM</div></div>
     </div>
     <div id="g-result" class="msg result" role="status" hidden></div>
     <canvas id="g-canvas" aria-label="Note highway"></canvas>
@@ -1018,7 +1064,7 @@ window.__startPlay = function () {
   function lsSet(k, v) { try { window.localStorage.setItem(k, v); } catch (e) { memStore[k] = v; } }
 
   var GS_KEY = 'abel:play:settings:v1';
-  var gs = { tempo: 80, loops: 2, beats: 4, difficulty: 'normal', metro: true, ghost: false, voice: 'snare', seq: 'A,B,C,D', pad: false, flip: false, view: 'highway' };
+  var gs = { tempo: 80, loops: 2, beats: 4, difficulty: 'normal', metro: true, ghost: false, voice: 'snare', seq: 'A,B,C,D', pad: false, flip: false, view: 'highway', st: { on: false, start: 60, target: 100, step: 5, per: 2 } };
   var padChosen = false;
   try {
     var savedGs = JSON.parse(lsGet(GS_KEY) || 'null');
@@ -1030,6 +1076,10 @@ window.__startPlay = function () {
       if (typeof savedGs.flip === 'boolean') gs.flip = savedGs.flip;
       if (typeof savedGs.pad === 'boolean') { gs.pad = savedGs.pad; padChosen = true; }
       if (['highway', 'abel', 'notation', 'clock'].indexOf(savedGs.view) >= 0) gs.view = savedGs.view;
+      if (savedGs.st && typeof savedGs.st === 'object') {
+        if (typeof savedGs.st.on === 'boolean') gs.st.on = savedGs.st.on;
+        ['start', 'target', 'step', 'per'].forEach(function (k) { if (isFinite(Number(savedGs.st[k]))) gs.st[k] = Number(savedGs.st[k]); });
+      }
       if (S.INSTRUMENTS[savedGs.voice]) gs.voice = savedGs.voice;
       if (typeof savedGs.seq === 'string' && savedGs.seq) gs.seq = savedGs.seq.slice(0, 600);
     }
@@ -1079,6 +1129,28 @@ window.__startPlay = function () {
   $('g-loops').onchange = function () { gs.loops = Number($('g-loops').value); saveGs(); updateBest(); };
   $('g-beats').onchange = function () { gs.beats = Number($('g-beats').value); saveGs(); };
   $('g-diff').onchange = function () { gs.difficulty = $('g-diff').value; saveGs(); updateBest(); };
+  // Speed Trainer controls
+  function stPlan() { return window.AbelSpeed.plan({ startBPM: gs.st.start, targetBPM: gs.st.target, bpmStep: gs.st.step, loopsPerStep: gs.st.per }); }
+  function showSt() {
+    $('g-st-box').hidden = !gs.st.on;
+    $('g-tempo').disabled = gs.st.on;
+    $('g-loops').disabled = gs.st.on;
+    $('g-st-on').checked = gs.st.on;
+    ['start', 'target', 'step', 'per'].forEach(function (k) { if (document.activeElement !== $('g-st-' + k)) $('g-st-' + k).value = gs.st[k]; });
+    var sp = stPlan();
+    $('g-st-sum').textContent = sp.levels.length < 2 ? 'Constant tempo: ' + sp.start + ' BPM.' :
+      sp.start + ' → ' + sp.target + ' BPM in ' + sp.levels.length + ' levels, ' + sp.loopsPerStep + ' × the sequence each (' + sp.totalLoops + ' in total). The step always heads toward the target.';
+  }
+  $('g-st-on').onchange = function () { gs.st.on = $('g-st-on').checked; saveGs(); showSt(); updateBest(); };
+  ['start', 'target', 'step', 'per'].forEach(function (k) {
+    $('g-st-' + k).oninput = function () { var v = Number($('g-st-' + k).value); if (isFinite(v) && $('g-st-' + k).value !== '') { gs.st[k] = v; saveGs(); showSt(); updateBest(); } };
+    $('g-st-' + k).onchange = function () {
+      var sp = stPlan();
+      gs.st.start = sp.start; gs.st.target = window.AbelSpeed.clampBpm(gs.st.target); gs.st.per = sp.loopsPerStep;
+      saveGs(); showSt(); updateBest();
+    };
+  });
+  showSt();
   $('g-view').onchange = function () { gs.view = $('g-view').value; saveGs(); if (!run) drawScene(null); };
   $('g-voice').onchange = function () { gs.voice = $('g-voice').value; saveGs(); };
   $('g-metro').onchange = function () { gs.metro = $('g-metro').checked; saveGs(); };
@@ -1173,7 +1245,8 @@ window.__startPlay = function () {
   $('g-seq').onkeydown = function (e) { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { loadSequence($('g-seq').value, false); } };
 
   function bestKey() {
-    return G.scoreKey(gSeq.items, { tempo: gs.tempo, loops: gs.loops, difficulty: gs.difficulty, ghostRests: gs.ghost });
+    var sp = gs.st.on ? stPlan() : null;
+    return G.scoreKey(gSeq.items, { tempo: sp ? 'ST' + sp.start + '>' + sp.target + '/' + gs.st.step + 'x' + sp.loopsPerStep : gs.tempo, loops: sp ? sp.totalLoops : gs.loops, difficulty: gs.difficulty, ghostRests: gs.ghost });
   }
   function updateBest() {
     var el = $('g-summary');
@@ -1214,7 +1287,8 @@ window.__startPlay = function () {
       if (run) return;
       if (!ctx || ctx.state !== 'running') { gameError('Audio is not running yet. Click anywhere on the page, then try again.'); return; }
       gameError('');
-      var tl = G.buildTimeline({ items: gSeq.items, loops: gs.loops, tempo: gs.tempo, beatsPerBar: gs.beats, ghostRests: gs.ghost, startTime: ctx.currentTime + 0.6 });
+      var spd = gs.st.on ? stPlan() : null; // Speed Trainer: 'Listen first' plays one sequence at the start tempo
+      var tl = G.buildTimeline({ items: gSeq.items, loops: spd && mode === 'demo' ? 1 : gs.loops, tempo: spd ? spd.tempos[0] : gs.tempo, tempos: spd && mode === 'play' ? spd.tempos : null, beatsPerBar: gs.beats, ghostRests: gs.ghost, startTime: ctx.currentTime + 0.6 });
       var gain = ctx.createGain();
       gain.connect(ctx.destination);
       tl.beats.forEach(function (b) { if (b.countIn || gs.metro || mode === 'demo') click(b.time, b.isBar, gain); });
@@ -1250,6 +1324,8 @@ window.__startPlay = function () {
     if (!run) return;
     var heard = A.perfToAudioTime(ctx, performance.now());
     run.heard = heard;
+    var bpmNow = Math.round(60 / run.tl.loopBeat[G.loopIndexAt(run.tl, heard)]);
+    if (bpmNow !== run.bpmNow) { run.bpmNow = bpmNow; $('g-hud-bpm').textContent = String(bpmNow); }
     if (hapticsActive()) fireHaptics(heard);
     if (run.judge) {
       var missed = run.judge.sweep(heard);
@@ -1302,6 +1378,7 @@ window.__startPlay = function () {
     var st = run && run.judge ? run.judge.stats() : null;
     $('g-hud-score').textContent = st ? String(st.score) : '0';
     $('g-hud-combo').textContent = st ? String(st.combo) : '0';
+    if (!run) $('g-hud-bpm').textContent = '—';
     $('g-hud-acc').textContent = st && st.judged + st.extra > 0 ? Math.round(st.accuracy) + '%' : '—';
   }
 
@@ -1537,7 +1614,7 @@ window.__startPlay = function () {
     if (!run || t == null) { g.fillStyle = P.muted; g.font = '15px ' + FONT; g.fillText(gSeq ? 'Press Play, or “Listen first”' : 'Load a sequence to begin', cx, H * 0.45); return; }
     var tl = run.tl, items = gSeq.items, beat = tl.beat, bpb = tl.beatsPerBar, total = tl.totalBeats;
     if (!run.byBeat) { run.byBeat = {}; tl.notes.forEach(function (n) { (run.byBeat[n.beatIndex] = run.byBeat[n.beatIndex] || {})[n.step] = n; }); }
-    var pos = (t - tl.seqStart) / beat, bi = Math.floor(pos), p = pos - bi;
+    var pos = G.beatPos(tl, t), bi = Math.floor(pos), p = pos - bi;
     function item(b) { return items[b % items.length]; }
     function sym(b, i, sound) {
       var base = fix(item(b).color) || '#4ade80', n = run.byBeat[b] && run.byBeat[b][i];
@@ -1635,7 +1712,7 @@ window.__startPlay = function () {
           if (tuplet) txt(String(n), x0 + (j + 0.5) * cell, y - 48, 13, P.barText);
           if (j > 0 || head) txt(item(b).label, x0 + (j + 0.5) * cell, y + 30, 11, fix(item(b).color) || P.muted);
         }
-        if (head) { var hx = x0 + Math.max(0, Math.min(1, (t - (tl.seqStart + b0 * beat)) / (bpb * beat))) * w; g.strokeStyle = P.count; g.lineWidth = 3; g.beginPath(); g.moveTo(hx, y - 56); g.lineTo(hx, y + 22); g.stroke(); }
+        if (head) { var hx = x0 + Math.max(0, Math.min(1, (G.beatPos(tl, t) - b0) / bpb)) * w; g.strokeStyle = P.count; g.lineWidth = 3; g.beginPath(); g.moveTo(hx, y - 56); g.lineTo(hx, y + 22); g.stroke(); }
       };
       var b0 = Math.max(0, Math.floor(bi / bpb)) * bpb;
       staff(b0, H * 0.34, bi >= 0);
@@ -2431,24 +2508,46 @@ window.__startPlay = function () {
 
   /* ------------------------------------------------------------------ timeline */
 
-  // opts: items, loops, tempo, beatsPerBar, countInBeats, ghostRests, startTime (audio clock, seconds)
+  // index of the sequence loop playing at audio time t (0 during the count-in)
+  function loopIndexAt(tl, t) {
+    var L = 0, last = tl.loopBeat.length - 1;
+    while (L < last && t >= tl.loopStart[L + 1]) L++;
+    return L;
+  }
+  // fractional beat position at audio time t, valid across tempo changes (negative during the count-in)
+  function beatPos(tl, t) {
+    if (t < tl.seqStart) return (t - tl.seqStart) / tl.beat;
+    var L = loopIndexAt(tl, t);
+    return L * tl.itemsPerLoop + (t - tl.loopStart[L]) / tl.loopBeat[L];
+  }
+
+  // opts: items, loops, tempo (or tempos: one BPM per loop), beatsPerBar, countInBeats, ghostRests, startTime (audio clock, seconds)
   function buildTimeline(opts) {
     var items = opts.items;
-    var loops = Math.max(1, Math.round(opts.loops || 1));
-    var tempo = clamp(opts.tempo || 80, 20, 300);
+    var tempos = Array.isArray(opts.tempos) && opts.tempos.length ? opts.tempos : null; // Speed Trainer: one tempo per loop
+    var loops = tempos ? tempos.length : Math.max(1, Math.round(opts.loops || 1));
+    var tempo = clamp(tempos ? tempos[0] : (opts.tempo || 80), 20, 300);
     var bpb = Math.max(1, Math.round(opts.beatsPerBar || 4));
     var countIn = opts.countInBeats == null ? bpb : Math.max(0, Math.round(opts.countInBeats));
     var start = opts.startTime || 0;
     var beat = 60 / tempo;
     var seqStart = start + countIn * beat;
     var totalBeats = items.length * loops;
+    // Every loop has its own beat length. Loop starts are cumulative sums on the audio clock, so the metronome,
+    // the notes, the judging and the drawing all read the SAME table: a tempo change cannot drift.
+    var loopBeat = [], loopStart = [seqStart], L0;
+    for (L0 = 0; L0 < loops; L0++) {
+      loopBeat.push(60 / clamp(tempos ? tempos[L0] : tempo, 20, 300));
+      loopStart.push(loopStart[L0] + items.length * loopBeat[L0]);
+    }
+    var beatTime = function (bx) { var Lx = Math.floor(bx / items.length); return loopStart[Lx] + (bx - Lx * items.length) * loopBeat[Lx]; };
     var notes = [];
     var beats = [];
     var b;
     for (b = -countIn; b < totalBeats; b++) {
       beats.push({
         index: b,
-        time: seqStart + b * beat,
+        time: b < 0 ? seqStart + b * beat : beatTime(b),
         countIn: b < 0,
         isBar: (((b % bpb) + bpb) % bpb) === 0,
         bar: b >= 0 ? Math.floor(b / bpb) + 1 : 0
@@ -2457,14 +2556,14 @@ window.__startPlay = function () {
     for (var L = 0; L < loops; L++) {
       for (var k = 0; k < items.length; k++) {
         var bi = L * items.length + k;
-        var bt = seqStart + bi * beat;
+        var bt = beatTime(bi);
         var bin = items[k].binary;
         var n = bin.length;
         for (var i = 0; i < n; i++) {
           var isSound = bin.charAt(i) === '1';
           if (!isSound && !opts.ghostRests) continue;
           notes.push({
-            time: bt + (i * beat) / n,
+            time: bt + (i * loopBeat[L]) / n,
             beatIndex: bi,
             item: k,
             loop: L,
@@ -2480,7 +2579,7 @@ window.__startPlay = function () {
         }
       }
     }
-    return { notes: notes, beats: beats, beat: beat, seqStart: seqStart, start: start, endTime: seqStart + totalBeats * beat, totalBeats: totalBeats, countIn: countIn, beatsPerBar: bpb };
+    return { notes: notes, beats: beats, beat: beat, seqStart: seqStart, start: start, endTime: loopStart[loops], loopStart: loopStart, loopBeat: loopBeat, itemsPerLoop: items.length, totalBeats: totalBeats, countIn: countIn, beatsPerBar: bpb };
   }
 
   /* ------------------------------------------------------------------ judging */
@@ -2639,6 +2738,8 @@ window.__startPlay = function () {
     windowsFor: windowsFor,
     parseSequence: parseSequence,
     buildTimeline: buildTimeline,
+    beatPos: beatPos,
+    loopIndexAt: loopIndexAt,
     createJudge: createJudge,
     grade: grade,
     scoreKey: scoreKey,
