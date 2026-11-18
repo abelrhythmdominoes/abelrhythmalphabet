@@ -10,6 +10,7 @@
     --bg: #111827; --card: #1f2937; --card2: #374151; --line: #4b5563; --text: #f9fafb; --muted: #9ca3af;
     --purple: #9333ea; --purple2: #7e22ce; --green: #16a34a; --green2: #15803d; --red: #dc2626; --amber: #f59e0b;
   }
+  :root { color-scheme: dark; }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
   body {
@@ -94,6 +95,19 @@
   #cal-pad { height: min(18vh, 120px); }
   @media (pointer: coarse) { #g-canvas { height: min(52vh, 460px); } }
   .grade { font-size: 3rem; font-weight: 900; line-height: 1; }
+  button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid #c4b5fd; outline-offset: 2px; }
+  .actions button { flex: 1 1 140px; min-height: 54px; font-size: 1.05rem; }
+  .group { margin: 26px 0 4px; font-size: 1.25rem; }
+  details.card { padding: 0; }
+  details.card > summary { list-style: none; cursor: pointer; padding: 14px; min-height: 48px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; border-radius: 12px; }
+  details.card > summary::-webkit-details-marker { display: none; }
+  details.card > summary::before { content: "▸"; color: var(--muted); width: 1em; flex: 0 0 auto; transition: transform .15s; }
+  details.card[open] > summary::before { transform: rotate(90deg); }
+  details.card > summary:hover { background: #263244; }
+  details.card > summary .t { font-size: 1.1rem; font-weight: 700; }
+  details.card > summary .muted { flex: 1 1 200px; }
+  details.card > .body { padding: 0 14px 14px; }
+  @media (prefers-reduced-motion: reduce) { .pad, details.card > summary::before { transition: none; } .pad.flash, .tappad.down { transform: none; } }
   .counts { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0; font-weight: 700; }
 </style>
 </head>
@@ -103,7 +117,7 @@
   <header>
     <p class="muted"><a href="./index.html">← Back to ABEL</a></p>
     <h1>ABEL Play</h1>
-    <p class="muted">Play ABEL rhythms with your computer keyboard or a MIDI drum pad. Everything is saved on this device.</p>
+    <p class="muted">Play ABEL on any device with your screen, your keyboard or on a MIDI instrument.</p>
   </header>
 
   <!-- 0. GAME -->
@@ -126,15 +140,15 @@
       <div><label class="t" for="g-voice">Sound for “Listen first” and the tap pad</label><select id="g-voice"></select></div>
     </div>
     <label class="check"><input type="checkbox" id="g-metro" checked> Metronome clicks during the game</label>
-    <label class="check"><input type="checkbox" id="g-ghost"> Rests are ghost notes (play them with a ghost key or pad)</label>
+    <label class="check"><input type="checkbox" id="g-ghost"> Ghost notes (play them with a ghost key or pad)</label>
     <div id="g-ghost-note" class="msg" hidden>Ghost notes: tap the small <b>soft tap</b> pad (on the <span id="g-side">right</span>) for the rests, and the big pad for the notes.</div>
     <label class="check"><input type="checkbox" id="g-pad-on"> Show a tap pad on the screen (for phones and tablets without a keyboard or MIDI pad)</label>
-    <label class="check" id="g-flip-wrap" hidden><input type="checkbox" id="g-flip"> Put the soft tap pad on the left (for left-handed play)</label>
+    <label class="check" id="g-flip-wrap" hidden><input type="checkbox" id="g-flip"> Swap tap pads</label>
 
-    <div class="row" style="margin-top:10px">
+    <div class="row actions" style="margin-top:14px">
       <button id="g-play" class="primary" disabled>▶ Play</button>
       <button id="g-listen" disabled>👂 Listen first</button>
-      <button id="g-stop" class="danger" disabled>■ Stop</button>
+      <button id="g-stop" class="danger" disabled title="Shortcut: Esc">■ Stop</button>
     </div>
 
     <div class="hud" id="g-hud" aria-live="off">
@@ -151,21 +165,27 @@
     <p class="muted" id="g-hint" style="margin-top:6px"></p>
   </section>
 
-  <!-- 1. CONNECT -->
-  <section class="card" aria-labelledby="h-connect">
-    <h2 id="h-connect">1 · Connect</h2>
+  <h2 class="group" id="h-setup">Setup &amp; settings</h2>
+  <p class="muted">Everything below is optional. The game above already works with the on-screen pad or the keyboard.</p>
+
+  <!-- CONNECT -->
+  <details class="card">
+    <summary><span class="t">Connect a MIDI instrument</span><span class="muted">Drum pad, e-drums or MIDI keyboard</span></summary>
+    <div class="body">
     <div class="row">
       <button id="btn-midi" class="primary">Enable MIDI + audio</button>
-      <span class="muted grow">Plug in your device any time: it is detected automatically.</span>
+      <span class="muted grow">Plug in your instrument any time: it is detected automatically.</span>
     </div>
     <div id="midi-msg" class="msg">MIDI is not enabled yet. The keyboard works already.</div>
     <div id="devices" style="margin-top:8px"></div>
     <div id="audio-msg" class="msg">Audio starts with your first click or key press.</div>
-  </section>
+    </div>
+  </details>
 
-  <!-- 2. BINDINGS -->
-  <section class="card" aria-labelledby="h-bind">
-    <h2 id="h-bind">2 · Key &amp; MIDI bindings</h2>
+  <!-- BINDINGS -->
+  <details class="card">
+    <summary><span class="t">Keys &amp; MIDI pads</span><span class="muted">Choose which key or pad plays which sound</span></summary>
+    <div class="body">
     <p class="muted">Choose which key, MIDI note or whole MIDI device plays which sound. A <b>ghost</b> binding ignores how hard you hit and always plays at a fixed low volume.</p>
     <div class="row" style="margin:8px 0">
       <button id="btn-add" class="accent">+ Add binding</button>
@@ -174,12 +194,14 @@
       <button id="btn-clear" class="small danger">Remove all</button>
     </div>
     <div id="bind-list"></div>
-  </section>
+    </div>
+  </details>
 
-  <!-- 3. LATENCY -->
-  <section class="card" aria-labelledby="h-lat">
-    <h2 id="h-lat">3 · Latency offset</h2>
-    <p class="muted">Every hit is compared with the music after being shifted by this amount. If you always feel you hit late, raise it; if early, lower it. The highway and the sound already follow the same audio clock.</p>
+  <!-- LATENCY -->
+  <details class="card">
+    <summary><span class="t">Timing adjustment</span><span class="muted">If you always feel early or late</span></summary>
+    <div class="body">
+    <p class="muted">Every hit is compared with the music after being shifted by this amount. If you often feel you hit late, raise it; if early, lower it.</p>
     <div class="row">
       <span class="big" id="off-val">0 ms</span>
       <input id="off-range" class="grow" type="range" min="-150" max="150" step="1" value="0" aria-label="Latency offset in milliseconds">
@@ -187,21 +209,25 @@
     </div>
     <div class="row" style="margin-top:10px">
       <button id="btn-cal">Measure my latency</button>
-      <span class="muted grow">Hit along with 10 clicks (any bound key or pad). This also includes your own natural habit of hitting slightly early or late, so repeat it once or twice.</span>
+      <span class="muted grow">Hit along with 10 clicks using any key, pad or the on-screen pad. The result also includes your own natural habit of hitting slightly early or late, so try it once or twice.</span>
     </div>
     <div id="cal-msg" class="msg" hidden></div>
     <button id="cal-pad" class="tappad" type="button" hidden aria-label="Tap pad for the latency test">TAP</button>
-  </section>
+    </div>
+  </details>
 
-  <!-- 4. TEST PADS -->
-  <section class="card" aria-labelledby="h-pads">
-    <h2 id="h-pads">4 · Test the sounds</h2>
+  <!-- TEST PADS -->
+  <details class="card">
+    <summary><span class="t">Test the sounds</span><span class="muted">Tap a pad to hear each instrument</span></summary>
+    <div class="body">
     <div id="pads" class="pads"></div>
-  </section>
+    </div>
+  </details>
 
-  <!-- 5. MONITOR -->
-  <section class="card" aria-labelledby="h-mon">
-    <h2 id="h-mon">5 · Live monitor</h2>
+  <!-- MONITOR -->
+  <details class="card">
+    <summary><span class="t">Live monitor</span><span class="muted">See every hit as it arrives, handy for troubleshooting</span></summary>
+    <div class="body">
     <div class="row" style="margin-bottom:8px">
       <label class="check"><input type="checkbox" id="chk-other"> Show other MIDI messages (CC, pitch bend…)</label>
       <button id="btn-log-clear" class="small">Clear</button>
@@ -209,8 +235,9 @@
     </div>
     <div id="log" role="log" aria-live="off"></div>
     <textarea id="copy-box" hidden rows="6" style="width:100%;margin-top:8px;background:#0b1220;color:#e5e7eb;border:1px solid #4b5563;border-radius:8px;padding:8px;font:12px ui-monospace,Consolas,monospace" aria-label="Log text to copy"></textarea>
-    <p class="muted" style="margin-top:6px">Copy the log and send it to me if something does not behave as expected.</p>
-  </section>
+    <p class="muted" style="margin-top:6px">Copy the log and send it to <a href="mailto:hello@abeldominoes.com">hello@abeldominoes.com</a> if something does not behave as expected.</p>
+    </div>
+  </details>
 </main>
 
 <!-- BINDING MODAL -->
@@ -520,7 +547,15 @@ window.__startPlay = function () {
   }
 
   /* ---------------------------------------------------------------- bindings list */
+  function keyHint() {
+    var n = [], gh = [];
+    settings.bindings.forEach(function (b) { if (b.kind === 'key') (b.ghost ? gh : n).push(b.codeLabel || b.code); });
+    if (!n.length && !gh.length) return '';
+    return 'Your keys: ' + (n.length ? n.join(' ') : '–') + (gh.length ? ' · ghost: ' + gh.join(' ') : '') + '.';
+  }
+  function refreshHint() { if (typeof applyPad === 'function' && gs) applyPad(); }
   function renderBindings() {
+    refreshHint();
     var box = $('bind-list');
     box.textContent = '';
     if (!settings.bindings.length) {
@@ -905,8 +940,8 @@ window.__startPlay = function () {
     $('g-pad-soft').hidden = !(gs.pad && gs.ghost);
     $('g-ghost-note').hidden = !(gs.pad && gs.ghost);
     $('g-hint').textContent = gs.pad
-      ? 'Tap the pad when a note reaches the line.' + (gs.ghost ? ' Use the small soft tap pad for ghost notes.' : '') + ' A keyboard or a MIDI pad works too.'
-      : 'Hit any bound key or pad when a note reaches the line. Keys and pads are set up lower on this page.';
+      ? 'Tap the pad when a note reaches the line.' + (gs.ghost ? ' Use the small soft tap pad for ghost notes.' : '') + ' A keyboard or a MIDI pad works too.' + (keyHint() ? ' ' + keyHint() : '')
+      : 'Hit a key or MIDI pad when a note reaches the line. ' + (keyHint() || 'Set up your keys and pads in “Keys & MIDI pads” below.') + ' Esc stops the game.';
     if (!gs.pad) $('cal-pad').hidden = true;
   }
   function bindPad(el, soft) {
@@ -2317,7 +2352,7 @@ window.__startPlay = function () {
     if (e && e.target && e.target !== window) return;
     box.hidden = false;
     box.innerHTML = '<b>Something went wrong:</b> ' + String(e && e.message ? e.message : 'unknown error').replace(/</g, '&lt;') +
-      '<br>Please copy this message and send it to me.';
+      '<br>Please copy this message and send it to <a href="mailto:hello@abeldominoes.com">hello@abeldominoes.com</a>.';
   });
   window.__startPlay();
 })();
