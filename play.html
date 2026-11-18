@@ -1710,7 +1710,7 @@ window.__startPlay = function () {
             i = e;
           }
           if (tuplet) txt(String(n), x0 + (j + 0.5) * cell, y - 48, 13, P.barText);
-          if (j > 0 || head) txt(item(b).label, x0 + (j + 0.5) * cell, y + 30, 11, fix(item(b).color) || P.muted);
+          txt(item(b).label, x0 + (j + 0.5) * cell, y + 30, 11, fix(item(b).color) || P.muted);
         }
         if (head) { var hx = x0 + Math.max(0, Math.min(1, (G.beatPos(tl, t) - b0) / bpb)) * w; g.strokeStyle = P.count; g.lineWidth = 3; g.beginPath(); g.moveTo(hx, y - 56); g.lineTo(hx, y + 22); g.stroke(); }
       };
