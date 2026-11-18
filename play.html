@@ -83,7 +83,12 @@
   .tappad { display: block; width: 100%; height: min(24vh, 170px); min-height: 96px; margin-top: 10px; border-radius: 16px; border: 0; color: #fff;
     background: linear-gradient(180deg, #7e22ce, #581c87); font-size: 1.7rem; font-weight: 900; letter-spacing: .12em;
     touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; cursor: pointer; }
-  .tappad[hidden] { display: none; }
+  .tappad[hidden], .padrow[hidden] { display: none; }
+  .padrow { display: flex; gap: 10px; margin-top: 10px; }
+  .padrow .tappad { margin-top: 0; width: auto; }
+  #g-pad { flex: 3 1 0; }
+  #g-pad-soft { flex: 1 1 0; background: linear-gradient(180deg, #4b5563, #374151); font-size: .95rem; letter-spacing: .03em; line-height: 1.25; padding: 0 4px; }
+  #g-pad-soft.down { background: #6b7280; }
   .tappad.down { background: #9333ea; transform: scale(.985); }
   #cal-pad { height: min(18vh, 120px); }
   @media (pointer: coarse) { #g-canvas { height: min(52vh, 460px); } }
@@ -121,7 +126,7 @@
     </div>
     <label class="check"><input type="checkbox" id="g-metro" checked> Metronome clicks during the game</label>
     <label class="check"><input type="checkbox" id="g-ghost"> Rests are ghost notes (play them with a ghost key or pad)</label>
-    <div id="g-ghost-note" class="msg warn" hidden>The on-screen tap pad cannot play ghost notes. To play them, use a keyboard or a MIDI pad, or turn this option off.</div>
+    <div id="g-ghost-note" class="msg" hidden>Ghost notes: tap the small <b>soft tap</b> pad (on the right) for the rests, and the big pad for the notes.</div>
     <label class="check"><input type="checkbox" id="g-pad-on"> Show a tap pad on the screen (for phones and tablets without a keyboard or MIDI pad)</label>
 
     <div class="row" style="margin-top:10px">
@@ -137,7 +142,10 @@
     </div>
     <div id="g-result" class="msg result" role="status" hidden></div>
     <canvas id="g-canvas" aria-label="Note highway"></canvas>
-    <button id="g-pad" class="tappad" type="button" hidden aria-label="Tap pad: tap when a note reaches the line">TAP</button>
+    <div id="g-pads" class="padrow" hidden>
+      <button id="g-pad" class="tappad" type="button" aria-label="Tap pad: tap when a note reaches the line">TAP</button>
+      <button id="g-pad-soft" class="tappad" type="button" hidden aria-label="Soft tap pad: tap on ghost notes (rests)">soft<br>tap</button>
+    </div>
     <p class="muted" id="g-hint" style="margin-top:6px"></p>
   </section>
 
@@ -476,7 +484,7 @@ window.__startPlay = function () {
     setTimeout(function () { el.classList.remove('flash'); }, 110);
   }
   function fmtEvent(ev) {
-    if (ev.source === 'tap') return 'TAP  · on-screen pad';
+    if (ev.source === 'tap') return 'TAP  · ' + (ev.pad === 'soft' ? 'soft pad (ghost)' : 'on-screen pad');
     if (ev.source === 'key') return 'KEY  · ' + (ev.label || ev.code) + ' (' + ev.code + ')';
     return 'MIDI · ' + ev.deviceName + ' · note ' + ev.note + ' vel ' + ev.velocity + ' ch' + ev.channel;
   }
@@ -885,30 +893,32 @@ window.__startPlay = function () {
   /* ---- on-screen tap pad (phones and tablets): normal hits only, no ghost notes */
   function applyPad() {
     $('g-pad-on').checked = gs.pad;
-    $('g-pad').hidden = !gs.pad;
+    $('g-pads').hidden = !gs.pad;
+    $('g-pad-soft').hidden = !(gs.pad && gs.ghost);
     $('g-ghost-note').hidden = !(gs.pad && gs.ghost);
     $('g-hint').textContent = gs.pad
-      ? 'Tap the pad when a note reaches the line. A keyboard or a MIDI pad works too.'
+      ? 'Tap the pad when a note reaches the line.' + (gs.ghost ? ' Use the small soft tap pad for ghost notes.' : '') + ' A keyboard or a MIDI pad works too.'
       : 'Hit any bound key or pad when a note reaches the line. Keys and pads are set up lower on this page.';
     if (!gs.pad) $('cal-pad').hidden = true;
   }
-  function bindPad(el) {
+  function bindPad(el, soft) {
     el.addEventListener('pointerdown', function (e) {
       e.preventDefault();
       el.classList.add('down');
       ensureAudio();
-      var ev = { source: 'tap', label: 'Tap pad', velocity: null, timeStamp: e.timeStamp };
+      var ev = { source: 'tap', pad: soft ? 'soft' : 'main', label: 'Tap pad', velocity: null, timeStamp: e.timeStamp };
       if (cal && ctx) cal.hits.push(A.perfToAudioTime(ctx, ev.timeStamp)); // the latency test counts taps too
       if (modalOpen) return;
-      processHit(ev, { voice: gs.voice, ghost: false, silent: false, fixedVelocity: 0.25 });
+      processHit(ev, { voice: gs.voice, ghost: !!soft, silent: false, fixedVelocity: A.DEFAULT_GHOST_VELOCITY }); // the soft pad is a ghost note: fixed low volume
     });
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (n) {
       el.addEventListener(n, function () { el.classList.remove('down'); });
     });
     el.addEventListener('contextmenu', function (e) { e.preventDefault(); });
   }
-  bindPad($('g-pad'));
-  bindPad($('cal-pad'));
+  bindPad($('g-pad'), false);
+  bindPad($('g-pad-soft'), true);
+  bindPad($('cal-pad'), false);
 
   /* ---- loading a sequence */
   var EXAMPLES = [
