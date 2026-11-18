@@ -25,6 +25,7 @@
   }
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; } /* a hidden element must stay hidden, whatever display its class sets */
   html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
@@ -1087,6 +1088,7 @@ window.__startPlay = function () {
     $('g-pads').classList.toggle('flip', !!gs.flip); // the soft pad goes to the left
     $('g-flip').checked = !!gs.flip;
     $('g-flip-wrap').hidden = !(gs.pad && gs.ghost);
+    $('g-flip').disabled = !(gs.pad && gs.ghost); // not selectable while ghost notes (or the tap pad) are off
     $('g-side').textContent = gs.flip ? 'left' : 'right';
     $('g-pad-soft').hidden = !(gs.pad && gs.ghost);
     $('g-ghost-note').hidden = !(gs.pad && gs.ghost);
