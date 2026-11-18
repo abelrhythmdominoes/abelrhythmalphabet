@@ -163,6 +163,13 @@
   button.switch[aria-checked="true"]::after { transform: translateX(20px); }
   button.switch:disabled { opacity: .4; cursor: not-allowed; }
   html[data-theme="light"] button.switch:not([aria-checked="true"]) { background: #9ca3af; }
+  #mic-status { font-size: .92rem; }
+  .subt { font-size: 1rem; margin: 16px 0 6px; }
+  .micpanel { background: var(--sunk); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin: 12px 0; }
+  .meter { position: relative; height: 16px; border-radius: 8px; background: var(--deep); border: 1px solid var(--line); overflow: hidden; margin: 10px 0 4px; }
+  .meter i { display: block; height: 100%; width: 0; background: #22c55e; }
+  .meter.hit i { background: #a855f7; }
+  .meter b { position: absolute; top: 0; bottom: 0; left: 50%; width: 3px; background: #f59e0b; }
   .counts { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0; font-weight: 700; }
 </style>
 </head>
@@ -202,6 +209,28 @@
     <div id="g-error" class="msg bad" hidden></div>
     <div class="chips" id="g-examples" aria-label="Example sequences"></div>
 
+    <div class="field" style="margin:14px 0 4px">
+      <label class="t" id="g-input-label">How do you want to play?</label>
+      <div class="seg" id="g-input" role="radiogroup" aria-labelledby="g-input-label">
+        <label><input type="radio" name="ginput" value="device" checked><span>⌨️ Screen, keyboard or MIDI</span></label>
+        <label><input type="radio" name="ginput" value="mic"><span>🎤 Microphone</span></label>
+      </div>
+      <p class="muted" id="mic-na" hidden style="margin-top:6px">The microphone is not available here: it needs a secure (https) page and a device with a microphone.</p>
+    </div>
+    <div id="mic-panel" class="micpanel" hidden>
+      <p class="muted" style="margin-top:0">Clap, tap on a table or play a real drum: ABEL listens and judges your timing. The sound is analysed on this device only; nothing is recorded or sent anywhere.</p>
+      <div class="row">
+        <button id="mic-toggle" class="accent small" type="button">Turn on the microphone</button>
+        <span id="mic-status" class="muted grow" role="status">The microphone is off.</span>
+      </div>
+      <div class="meter" id="mic-meter" aria-hidden="true"><i id="mic-level"></i><b id="mic-thr"></b></div>
+      <p class="muted" style="margin:0 0 8px;font-size:.8rem">Make a sound: the bar should jump past the orange mark and turn purple on each hit.</p>
+      <label class="t" for="mic-sens" style="display:block;font-weight:700;font-size:.9rem;margin-bottom:4px">Sensitivity: <span id="mic-sens-val">60</span></label>
+      <input id="mic-sens" type="range" min="0" max="100" step="1" value="60">
+      <label class="check"><input type="checkbox" id="mic-phones"> <span>I am wearing headphones <span class="muted">(then the metronome clicks play during the game)</span></span></label>
+      <p class="muted" style="margin:6px 0 0;font-size:.85rem">Without headphones the metronome stays silent during the game, so the microphone does not hear it (the count-in still plays). Phone vibration is also paused. Start with the “Easy” difficulty. Ghost notes are not available with the microphone.</p>
+    </div>
+
     <div class="sgrid">
       <div><label class="t" for="g-tempo">Tempo: <span id="g-tempo-val">80 BPM</span></label><input id="g-tempo" type="range" min="40" max="200" step="1" value="80"></div>
       <div><label class="t" for="g-loops">Repeat the sequence</label><select id="g-loops"></select></div>
@@ -210,9 +239,9 @@
       <div><label class="t" for="g-voice">Sound for “Listen first” and the tap pad</label><select id="g-voice"></select></div>
     </div>
     <label class="check"><input type="checkbox" id="g-metro" checked> Metronome clicks during the game</label>
-    <label class="check"><input type="checkbox" id="g-ghost"> Ghost notes (play them with a ghost key or pad)</label>
+    <label class="check" id="g-ghost-wrap"><input type="checkbox" id="g-ghost"> Ghost notes (play them with a ghost key or pad)</label>
     <div id="g-ghost-note" class="msg" hidden>Ghost notes: tap the small <b>soft tap</b> pad (on the <span id="g-side">right</span>) for the rests, and the big pad for the notes.</div>
-    <label class="check"><input type="checkbox" id="g-pad-on"> Show a tap pad on the screen (for phones and tablets without a keyboard or MIDI pad)</label>
+    <label class="check" id="g-padon-wrap"><input type="checkbox" id="g-pad-on"> Show a tap pad on the screen (for phones and tablets without a keyboard or MIDI pad)</label>
     <label class="check" id="g-flip-wrap" hidden><input type="checkbox" id="g-flip"> Swap tap pads</label>
     <div class="switchrow" id="haptic-row">
       <button id="btn-haptic" class="switch" type="button" role="switch" aria-checked="true" aria-label="Haptic feedback"></button>
@@ -276,6 +305,7 @@
     <summary><span class="t">Timing adjustment</span><span class="muted">If you always feel early or late</span></summary>
     <div class="body">
     <p class="muted">Every hit is compared with the music after being shifted by this amount. If you often feel you hit late, raise it; if early, lower it.</p>
+    <h3 class="subt">Keyboard, MIDI pads and tap pad</h3>
     <div class="row">
       <span class="big" id="off-val">0 ms</span>
       <input id="off-range" class="grow" type="range" min="-150" max="150" step="1" value="0" aria-label="Latency offset in milliseconds">
@@ -284,6 +314,16 @@
     <div class="row" style="margin-top:10px">
       <button id="btn-cal">Measure my latency</button>
       <span class="muted grow">Hit along with 10 clicks using any key, pad or the on-screen pad. The result also includes your own natural habit of hitting slightly early or late, so try it once or twice.</span>
+    </div>
+    <h3 class="subt">Microphone</h3>
+    <div class="row">
+      <span class="big" id="moff-val">0 ms</span>
+      <input id="moff-range" class="grow" type="range" min="-150" max="300" step="1" value="0" aria-label="Microphone latency offset in milliseconds">
+      <button id="moff-reset" class="small">Reset</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button id="btn-cal-mic">Measure microphone latency</button>
+      <span class="muted grow">Wear headphones, then clap or tap along with 10 clicks.</span>
     </div>
     <div id="cal-msg" class="msg" hidden></div>
     <button id="cal-pad" class="tappad" type="button" hidden aria-label="Tap pad for the latency test">TAP</button>
@@ -676,7 +716,7 @@ window.__startPlay = function () {
       if (learning) { capture(ev); return true; }
       return false;
     }
-    if (cal && ctx) cal.hits.push(A.perfToAudioTime(ctx, ev.timeStamp));
+    if (cal && !cal.mic && ctx) cal.hits.push(A.perfToAudioTime(ctx, ev.timeStamp));
     var b = A.resolveBinding(settings.bindings, ev);
     var stampText = ' @' + ev.timeStamp.toFixed(1) + 'ms';
     if (!b) {
@@ -693,7 +733,7 @@ window.__startPlay = function () {
     var silent = b.ghost && b.silent;
     var played = silent ? true : playVoice(b.voice, v);
     flashPad(b.voice);
-    if (run && run.mode === 'play' && run.judge) { gameHit(ev, b); if (hapticsActive()) safeVibrate(HAPTIC_MS[b.ghost ? 1 : 2]); }
+    if (run && run.mode === 'play' && run.judge && run.input !== 'mic') { gameHit(ev, b); if (hapticsActive()) safeVibrate(HAPTIC_MS[b.ghost ? 1 : 2]); }
     logLine('hit', fmtEvent(ev) + '  → ' + (VOICE_NAMES[b.voice] || b.voice) + ' ' + Math.round(v * 100) + '%' + (b.ghost ? ' (ghost' + (silent ? ', silent' : '') + ')' : '') + (played ? '' : '  [audio not running: click the page]') + stampText);
     return true;
   }
@@ -927,70 +967,103 @@ window.__startPlay = function () {
   };
 
   /* ---------------------------------------------------------------- latency */
+  function fmtMs(v) { return (v > 0 ? '+' : '') + v + ' ms'; }
   function showOffset() {
     var v = settings.offsetMs;
-    $('off-val').textContent = (v > 0 ? '+' : '') + v + ' ms';
+    $('off-val').textContent = fmtMs(v);
     $('off-range').value = v;
+    var m = (typeof gs === 'object' && gs) ? gs.micOffset : 0;
+    $('moff-val').textContent = fmtMs(m);
+    $('moff-range').value = m;
   }
   $('off-range').oninput = function () { settings.offsetMs = Number($('off-range').value); showOffset(); };
   $('off-range').onchange = save;
   $('off-reset').onclick = function () { settings.offsetMs = 0; showOffset(); save(); };
+  $('moff-range').oninput = function () { gs.micOffset = Number($('moff-range').value); showOffset(); };
+  $('moff-range').onchange = function () { saveGs(); };
+  $('moff-reset').onclick = function () { gs.micOffset = 0; showOffset(); saveGs(); };
+  // the offset (ms) that applies to the way the person is playing
+  function offsetFor(isMic) { return isMic ? gs.micOffset : settings.offsetMs; }
+  function setOffsetFor(isMic, v) {
+    if (isMic) { gs.micOffset = Math.max(-150, Math.min(300, Math.round(v))); saveGs(); }
+    else { settings.offsetMs = Math.max(-150, Math.min(150, Math.round(v))); save(); }
+    showOffset();
+  }
 
   var CAL_BPM = 100;
   var CAL_CLICKS = 10;
   var CAL_WARMUP = 2;
-  $('btn-cal').onclick = function () {
+  function calMessage(cls, text) {
+    var m = $('cal-msg');
+    m.hidden = false; m.className = 'msg ' + cls;
+    m.textContent = text;
+    return m;
+  }
+  function startCalibration(isMic) {
     if (cal) return;
-    ensureAudio().then(function () {
-      if (!ctx || ctx.state !== 'running') {
-        var m0 = $('cal-msg');
-        m0.hidden = false; m0.className = 'msg warn';
-        m0.textContent = 'Audio is not running yet. Click anywhere on the page, then try again.';
-        return;
-      }
-      var beat = 60 / CAL_BPM;
-      var t0 = ctx.currentTime + 1.3;
-      var clicks = [];
-      for (var i = 0; i < CAL_CLICKS; i++) {
-        clicks.push(t0 + i * beat);
-        click(t0 + i * beat, i % 4 === 0);
-      }
-      cal = { clicks: clicks, hits: [] };
-      if (gs && gs.pad) $('cal-pad').hidden = false;
-      var msg = $('cal-msg');
-      msg.hidden = false; msg.className = 'msg';
-      msg.textContent = 'Listen… then hit along with the clicks (the first two are warm-up).';
-      $('btn-cal').disabled = true;
-      setTimeout(function () {
-        var run = cal;
-        cal = null;
-        $('cal-pad').hidden = true;
-        $('btn-cal').disabled = false;
-        var r = A.computeOffsets(run.clicks.slice(CAL_WARMUP), run.hits, 0.25);
-        if (r.count < 5) {
-          msg.className = 'msg warn';
-          msg.textContent = 'Only ' + r.count + ' usable hit(s) were detected (need at least 5). Try again and hit every click.';
-          return;
+    var go = function () {
+      ensureAudio().then(function () {
+        if (!ctx || ctx.state !== 'running') { calMessage('warn', 'Audio is not running yet. Click anywhere on the page, then try again.'); return; }
+        var beat = 60 / CAL_BPM;
+        var t0 = ctx.currentTime + 1.3;
+        var clicks = [];
+        for (var i = 0; i < CAL_CLICKS; i++) {
+          clicks.push(t0 + i * beat);
+          click(t0 + i * beat, i % 4 === 0);
         }
-        var med = Math.round(r.medianMs);
-        msg.className = 'msg ok';
-        msg.textContent = '';
-        var t = document.createElement('div');
-        t.textContent = 'Your typical offset: ' + (med > 0 ? '+' : '') + med + ' ms (' + r.count + ' hits, steadiness ±' + Math.round(r.spreadMs) + ' ms). Positive = you hit after the click.';
-        var use = document.createElement('button');
-        use.className = 'small primary';
-        use.style.marginTop = '8px';
-        use.textContent = 'Use ' + (med > 0 ? '+' : '') + med + ' ms';
-        use.onclick = function () {
-          settings.offsetMs = Math.max(-150, Math.min(150, med));
-          showOffset(); save();
-          logLine('sys', 'Latency offset set to ' + settings.offsetMs + ' ms.');
-        };
-        msg.appendChild(t); msg.appendChild(use);
-        logLine('sys', 'Calibration: median ' + med + ' ms, n=' + r.count + ', spread ±' + Math.round(r.spreadMs) + ' ms.');
-      }, (1.3 + (CAL_CLICKS - 1) * beat + 0.6) * 1000);
+        cal = { clicks: clicks, hits: [], mic: !!isMic };
+        if (!isMic && gs && gs.pad) $('cal-pad').hidden = false;
+        var msg = calMessage('', isMic ? 'Listen… then clap or tap along with the clicks (the first two are warm-up).' : 'Listen… then hit along with the clicks (the first two are warm-up).');
+        $('btn-cal').disabled = true; $('btn-cal-mic').disabled = true;
+        setTimeout(function () {
+          var runCal = cal;
+          cal = null;
+          $('cal-pad').hidden = true;
+          $('btn-cal').disabled = false; $('btn-cal-mic').disabled = false;
+          var r = A.computeOffsets(runCal.clicks.slice(CAL_WARMUP), runCal.hits, 0.25);
+          if (r.count < 5) {
+            msg.className = 'msg warn';
+            msg.textContent = 'Only ' + r.count + ' usable hit(s) were detected (need at least 5). Try again and hit every click' + (isMic ? ', a little louder or with the sensitivity raised.' : '.');
+            return;
+          }
+          var med = Math.round(r.medianMs);
+          msg.className = 'msg ok';
+          msg.textContent = '';
+          var t = document.createElement('div');
+          t.textContent = 'Your typical offset: ' + fmtMs(med) + ' (' + r.count + ' hits, steadiness ±' + Math.round(r.spreadMs) + ' ms). Positive = you hit after the click.';
+          var use = document.createElement('button');
+          use.className = 'small primary';
+          use.style.marginTop = '8px';
+          use.textContent = 'Use ' + fmtMs(med);
+          use.onclick = function () {
+            setOffsetFor(isMic, med);
+            logLine('sys', (isMic ? 'Microphone' : 'Latency') + ' offset set to ' + offsetFor(isMic) + ' ms.');
+          };
+          msg.appendChild(t); msg.appendChild(use);
+          logLine('sys', 'Calibration' + (isMic ? ' (microphone)' : '') + ': median ' + med + ' ms, n=' + r.count + ', spread ±' + Math.round(r.spreadMs) + ' ms.');
+        }, (1.3 + (CAL_CLICKS - 1) * beat + 0.6) * 1000);
+      });
+    };
+    if (!isMic) { go(); return; }
+    if (!gs.micPhones) {
+      // the clicks would be heard by the microphone and the result would be wrong
+      var m = calMessage('warn', '');
+      var d = document.createElement('div');
+      d.textContent = 'Put on headphones first, otherwise the microphone hears the clicks themselves and the result is wrong.';
+      var b = document.createElement('button');
+      b.className = 'small primary';
+      b.style.marginTop = '8px';
+      b.textContent = 'I am wearing headphones: continue';
+      b.onclick = function () { gs.micPhones = true; saveGs(); syncMicUi(); startCalibration(true); };
+      m.appendChild(d); m.appendChild(b);
+      return;
+    }
+    enableMic().then(function (ok) {
+      if (ok) go(); else calMessage('bad', 'The microphone is not available. See the message in “Play a sequence”.');
     });
-  };
+  }
+  $('btn-cal').onclick = function () { startCalibration(false); };
+  $('btn-cal-mic').onclick = function () { startCalibration(true); };
 
   /* ---------------------------------------------------------------- test pads */
   (function buildPads() {
@@ -1017,7 +1090,7 @@ window.__startPlay = function () {
   function lsSet(k, v) { try { window.localStorage.setItem(k, v); } catch (e) { memStore[k] = v; } }
 
   var GS_KEY = 'abel:play:settings:v1';
-  var gs = { tempo: 80, loops: 2, beats: 4, difficulty: 'normal', metro: true, ghost: false, voice: 'snare', seq: 'A,B,C,D', pad: false, flip: false };
+  var gs = { tempo: 80, loops: 2, beats: 4, difficulty: 'normal', metro: true, ghost: false, voice: 'snare', seq: 'A,B,C,D', pad: false, flip: false, input: 'device', micSens: 60, micPhones: false, micOffset: 0 };
   var padChosen = false;
   try {
     var savedGs = JSON.parse(lsGet(GS_KEY) || 'null');
@@ -1027,6 +1100,10 @@ window.__startPlay = function () {
       if (typeof savedGs.metro === 'boolean') gs.metro = savedGs.metro;
       if (typeof savedGs.ghost === 'boolean') gs.ghost = savedGs.ghost;
       if (typeof savedGs.flip === 'boolean') gs.flip = savedGs.flip;
+      if (savedGs.input === 'mic' || savedGs.input === 'device') gs.input = savedGs.input;
+      if (isFinite(Number(savedGs.micSens))) gs.micSens = Math.max(0, Math.min(100, Math.round(Number(savedGs.micSens))));
+      if (typeof savedGs.micPhones === 'boolean') gs.micPhones = savedGs.micPhones;
+      if (isFinite(Number(savedGs.micOffset))) gs.micOffset = Math.max(-150, Math.min(300, Math.round(Number(savedGs.micOffset))));
       if (typeof savedGs.pad === 'boolean') { gs.pad = savedGs.pad; padChosen = true; }
       if (S.INSTRUMENTS[savedGs.voice]) gs.voice = savedGs.voice;
       if (typeof savedGs.seq === 'string' && savedGs.seq) gs.seq = savedGs.seq.slice(0, 600);
@@ -1040,6 +1117,8 @@ window.__startPlay = function () {
     } catch (e) { gs.pad = false; }
   }
   function saveGs() { lsSet(GS_KEY, JSON.stringify(gs)); }
+  function micMode() { return gs.input === 'mic'; }
+  function ghostOn() { return gs.ghost && !micMode(); } // ghost notes cannot be played on a microphone
 
   var gSeq = null;     // the loaded sequence
   var run = null;      // the game / demo in progress
@@ -1084,18 +1163,27 @@ window.__startPlay = function () {
   /* ---- on-screen tap pad (phones and tablets): normal hits only, no ghost notes */
   function applyPad() {
     $('g-pad-on').checked = gs.pad;
-    $('g-pads').hidden = !gs.pad;
+    var mic = micMode();
+    var gh = gs.pad && ghostOn();
+    $('g-pads').hidden = !gs.pad || mic;
     $('g-pads').classList.toggle('flip', !!gs.flip); // the soft pad goes to the left
     $('g-flip').checked = !!gs.flip;
-    $('g-flip-wrap').hidden = !(gs.pad && gs.ghost);
-    $('g-flip').disabled = !(gs.pad && gs.ghost); // not selectable while ghost notes (or the tap pad) are off
+    $('g-flip-wrap').hidden = !gh;
+    $('g-flip').disabled = !gh; // not selectable while ghost notes (or the tap pad) are off
     $('g-side').textContent = gs.flip ? 'left' : 'right';
-    $('g-pad-soft').hidden = !(gs.pad && gs.ghost);
-    $('g-ghost-note').hidden = !(gs.pad && gs.ghost);
-    $('g-hint').textContent = gs.pad
-      ? 'Tap the pad when a note reaches the line.' + (gs.ghost ? ' Use the small soft tap pad for ghost notes.' : '') + ' A keyboard or a MIDI pad works too.' + (keyHint() ? ' ' + keyHint() : '')
+    $('g-pad-soft').hidden = !gh;
+    $('g-ghost-note').hidden = !gh;
+    $('g-ghost-wrap').hidden = mic;
+    $('g-padon-wrap').hidden = mic;
+    $('mic-panel').hidden = !mic;
+    var radios = document.querySelectorAll('#g-input input');
+    Array.prototype.forEach.call(radios, function (r) { r.checked = r.value === gs.input; });
+    $('g-hint').textContent = mic
+      ? 'Clap, tap or play a drum when a note reaches the line. Keep the microphone on and the sound level above the orange mark.'
+      : gs.pad
+      ? 'Tap the pad when a note reaches the line.' + (ghostOn() ? ' Use the small soft tap pad for ghost notes.' : '') + ' A keyboard or a MIDI pad works too.' + (keyHint() ? ' ' + keyHint() : '')
       : 'Hit a key or MIDI pad when a note reaches the line. ' + (keyHint() || 'Set up your keys and pads in “Keys & MIDI pads” below.') + ' Esc stops the game.';
-    if (!gs.pad) $('cal-pad').hidden = true;
+    if (!gs.pad || mic) $('cal-pad').hidden = true;
   }
   function bindPad(el, soft) {
     el.addEventListener('pointerdown', function (e) {
@@ -1103,7 +1191,7 @@ window.__startPlay = function () {
       el.classList.add('down');
       ensureAudio();
       var ev = { source: 'tap', pad: soft ? 'soft' : 'main', label: 'Tap pad', velocity: null, timeStamp: e.timeStamp };
-      if (cal && ctx) cal.hits.push(A.perfToAudioTime(ctx, ev.timeStamp)); // the latency test counts taps too
+      if (cal && !cal.mic && ctx) cal.hits.push(A.perfToAudioTime(ctx, ev.timeStamp)); // the latency test counts taps too
       if (modalOpen) return;
       processHit(ev, { voice: gs.voice, ghost: !!soft, silent: false, fixedVelocity: A.DEFAULT_GHOST_VELOCITY }); // the soft pad is a ghost note: fixed low volume
     });
@@ -1115,6 +1203,179 @@ window.__startPlay = function () {
   bindPad($('g-pad'), false);
   bindPad($('g-pad-soft'), true);
   bindPad($('cal-pad'), false);
+
+  /* ================================================================ MICROPHONE
+     An AudioWorklet watches the input level on the audio thread and reports the context time of every onset
+     (a clap, a tap, a drum hit), so timing does not depend on the main thread. Nothing is recorded or sent. */
+  var WORKLET_SRC = [
+    "class AbelOnset extends AudioWorkletProcessor {",
+    "  constructor() {",
+    "    super();",
+    "    this.thr = 0.015; this.floor = 0.003; this.prev = 0; this.armed = true; this.last = -1; this.n = 0; this.mx = 0;",
+    "    this.port.onmessage = (e) => { if (e.data && e.data.thr != null) this.thr = e.data.thr; };",
+    "  }",
+    "  process(inputs) {",
+    "    const ch = inputs[0] && inputs[0][0];",
+    "    if (!ch || !ch.length) return true;",
+    "    let sum = 0;",
+    "    for (let i = 0; i < ch.length; i++) sum += ch[i] * ch[i];",
+    "    const rms = Math.sqrt(sum / ch.length);",
+    "    const trig = Math.max(this.thr, this.floor * 3.5);",
+    "    const t = currentTime;",
+    "    if (rms < trig) this.floor += (rms - this.floor) * (rms > this.floor ? 0.003 : 0.02);",
+    "    if (this.armed) {",
+    "      if (rms >= trig && t - this.last >= 0.06) { this.armed = false; this.last = t; this.port.postMessage({ k: 1, time: t, level: rms }); }",
+    "    } else if (rms < trig * 0.5) {",
+    "      this.armed = true;",
+    "    } else if (rms > this.prev * 2 && rms >= trig && t - this.last >= 0.08) {",
+    "      this.last = t; this.port.postMessage({ k: 1, time: t, level: rms });",
+    "    }",
+    "    this.prev = rms;",
+    "    this.n++; if (rms > this.mx) this.mx = rms;",
+    "    if (this.n >= 8) { this.port.postMessage({ k: 0, level: this.mx, trig: trig }); this.n = 0; this.mx = 0; }",
+    "    return true;",
+    "  }",
+    "}",
+    "registerProcessor('abel-onset', AbelOnset);"
+  ].join('\n');
+
+  var mic = { on: false, starting: null, stream: null, src: null, node: null, sink: null, trackLatency: 0, moduleCtx: null, hitTimer: 0 };
+  function micSupported() { return !!(navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function'); }
+  function thrFromSens(v) { return 0.3 * Math.pow(10, -(v / 100) * 2.2); } // 0 = hard to trigger, 100 = very sensitive
+  function dbPct(x) { return Math.max(0, Math.min(100, ((20 * Math.log10(Math.max(x, 1e-5)) + 60) / 60) * 100)); }
+  function setMicStatus(text, cls) {
+    var el = $('mic-status');
+    el.textContent = text;
+    el.className = 'grow ' + (cls === 'ok' ? 'learned' : cls === 'bad' ? '' : 'muted');
+    el.style.color = cls === 'bad' ? '#f87171' : '';
+  }
+  function syncMicUi() {
+    $('mic-phones').checked = !!gs.micPhones;
+    $('mic-sens').value = gs.micSens;
+    $('mic-sens-val').textContent = String(gs.micSens);
+    $('mic-toggle').textContent = mic.on ? 'Turn off the microphone' : (mic.starting ? 'Starting…' : 'Turn on the microphone');
+    $('mic-toggle').disabled = !!mic.starting;
+    $('mic-na').hidden = micSupported();
+    if (!mic.on) { $('mic-level').style.width = '0'; }
+  }
+  function sendThreshold() {
+    if (mic.node) { try { mic.node.port.postMessage({ thr: thrFromSens(gs.micSens) }); } catch (e) { /* ignore */ } }
+  }
+  // where the sound was HEARD on the audio clock: the capture time minus the input and the output latency
+  function micLatency() {
+    return (ctx && (ctx.outputLatency || ctx.baseLatency) || 0) + (mic.trackLatency || 0);
+  }
+  function micError(err) {
+    var n = err && err.name;
+    if (n === 'NotAllowedError' || n === 'SecurityError') setMicStatus('Microphone permission was refused. Allow it in the address bar (lock icon → site settings → Microphone), then try again.', 'bad');
+    else if (n === 'NotFoundError' || n === 'OverconstrainedError') setMicStatus('No microphone was found on this device.', 'bad');
+    else if (n === 'NoWorklet') setMicStatus('This browser cannot analyse the microphone in real time. Try an up-to-date Chrome, Edge, Firefox or Safari.', 'bad');
+    else setMicStatus('The microphone could not start' + (n ? ' (' + n + ')' : '') + '.', 'bad');
+    logLine('sys', 'Microphone could not start (' + (n || 'error') + ').');
+  }
+  function enableMic() {
+    if (mic.on) return Promise.resolve(true);
+    if (mic.starting) return mic.starting;
+    if (!micSupported()) { micError({ name: 'NotFoundError' }); setMicStatus('The microphone needs a secure (https) page and a device with a microphone.', 'bad'); return Promise.resolve(false); }
+    setMicStatus('Asking for permission…', '');
+    mic.starting = ensureAudio().then(function (c) {
+      if (!c || !c.audioWorklet || typeof AudioWorkletNode === 'undefined') throw { name: 'NoWorklet' };
+      try { if (navigator.audioSession) navigator.audioSession.type = 'play-and-record'; } catch (e) { /* ignore */ }
+      return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } }).then(function (stream) {
+        if (mic.moduleCtx === c) return stream;
+        var url = URL.createObjectURL(new Blob([WORKLET_SRC], { type: 'application/javascript' }));
+        return c.audioWorklet.addModule(url).then(function () { URL.revokeObjectURL(url); mic.moduleCtx = c; return stream; }, function (e) {
+          URL.revokeObjectURL(url);
+          stream.getTracks().forEach(function (t) { t.stop(); });
+          throw e;
+        });
+      });
+    }).then(function (stream) {
+      mic.stream = stream;
+      var track = stream.getAudioTracks()[0];
+      try { mic.trackLatency = (track && track.getSettings && track.getSettings().latency) || 0; } catch (e) { mic.trackLatency = 0; }
+      if (track) track.onended = function () { disableMic('The microphone was disconnected.'); };
+      mic.src = ctx.createMediaStreamSource(stream);
+      mic.node = new AudioWorkletNode(ctx, 'abel-onset', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1] });
+      mic.sink = ctx.createGain();
+      mic.sink.gain.value = 0; // keeps the node running, and silent
+      mic.src.connect(mic.node);
+      mic.node.connect(mic.sink);
+      mic.sink.connect(ctx.destination);
+      mic.node.port.onmessage = onMicMessage;
+      mic.on = true;
+      sendThreshold();
+      setMicStatus('The microphone is on. Make a sound to test it.', 'ok');
+      logLine('sys', 'Microphone on' + (track && track.label ? ': ' + track.label : '') + (mic.trackLatency ? ' · input latency ' + Math.round(mic.trackLatency * 1000) + ' ms reported' : '') + '.');
+      return true;
+    }).catch(function (err) {
+      micError(err);
+      return false;
+    }).then(function (ok) {
+      mic.starting = null;
+      syncMicUi();
+      return ok;
+    });
+    syncMicUi();
+    return mic.starting;
+  }
+  function disableMic(message) {
+    var wasOn = mic.on;
+    mic.on = false;
+    try { if (mic.node) { mic.node.port.onmessage = null; mic.node.disconnect(); } } catch (e) { /* ignore */ }
+    try { if (mic.src) mic.src.disconnect(); } catch (e) { /* ignore */ }
+    try { if (mic.sink) mic.sink.disconnect(); } catch (e) { /* ignore */ }
+    try { if (mic.stream) mic.stream.getTracks().forEach(function (t) { t.onended = null; t.stop(); }); } catch (e) { /* ignore */ }
+    mic.node = mic.src = mic.sink = mic.stream = null;
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* ignore */ }
+    setMicStatus(message || 'The microphone is off.', message ? 'bad' : '');
+    if (wasOn) logLine('sys', 'Microphone off.');
+    syncMicUi();
+  }
+  var meterBusy = false;
+  function onMicMessage(e) {
+    var d = e.data;
+    if (!d) return;
+    if (d.k === 0) {
+      if (meterBusy) return;
+      meterBusy = true;
+      requestAnimationFrame(function () {
+        meterBusy = false;
+        $('mic-level').style.width = dbPct(d.level) + '%';
+        $('mic-thr').style.left = dbPct(d.trig) + '%';
+      });
+    } else if (d.k === 1) {
+      onMicHit(d.time, d.level);
+    }
+  }
+  function onMicHit(captureTime, level) {
+    if (run && run.mode === 'demo') return; // the demo's own sound reaches the microphone: ignore it
+    var heard = captureTime - micLatency();
+    var meter = $('mic-meter');
+    meter.classList.add('hit');
+    clearTimeout(mic.hitTimer);
+    mic.hitTimer = setTimeout(function () { meter.classList.remove('hit'); }, 120);
+    if (cal && cal.mic) cal.hits.push(heard);
+    if (run && run.mode === 'play' && run.judge && run.input === 'mic') gameHit({ heard: heard }, { ghost: false });
+    logLine('hit', 'MIC  · hit · level ' + Math.round(level * 100) + '%');
+  }
+
+  $('mic-toggle').onclick = function () { if (mic.on) disableMic(); else enableMic(); };
+  $('mic-sens').oninput = function () { gs.micSens = Number($('mic-sens').value); $('mic-sens-val').textContent = String(gs.micSens); sendThreshold(); };
+  $('mic-sens').onchange = saveGs;
+  $('mic-phones').onchange = function () { gs.micPhones = $('mic-phones').checked; saveGs(); };
+  Array.prototype.forEach.call(document.querySelectorAll('#g-input input'), function (r) {
+    r.onchange = function () {
+      if (run || !r.checked) return;
+      gs.input = r.value;
+      saveGs();
+      if (gs.input !== 'mic') disableMic(); // release the microphone as soon as it is not needed
+      applyPad();
+      updateBest();
+      $('g-result').hidden = true;
+    };
+  });
+  syncMicUi();
 
   /* ---- loading a sequence */
   var EXAMPLES = [
@@ -1168,7 +1429,7 @@ window.__startPlay = function () {
   $('g-seq').onkeydown = function (e) { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { loadSequence($('g-seq').value, false); } };
 
   function bestKey() {
-    return G.scoreKey(gSeq.items, { tempo: gs.tempo, loops: gs.loops, difficulty: gs.difficulty, ghostRests: gs.ghost });
+    return G.scoreKey(gSeq.items, { tempo: gs.tempo, loops: gs.loops, difficulty: gs.difficulty, ghostRests: ghostOn() }) + (micMode() ? '|mic' : '');
   }
   function updateBest() {
     var el = $('g-summary');
@@ -1183,6 +1444,7 @@ window.__startPlay = function () {
     $('g-listen').disabled = busy || !gSeq;
     $('g-stop').disabled = !busy;
     $('g-load').disabled = busy;
+    Array.prototype.forEach.call(document.querySelectorAll('#g-input input'), function (r) { r.disabled = busy || (r.value === 'mic' && !micSupported()); });
   }
 
   /* ---- audio helpers for a run */
@@ -1205,19 +1467,28 @@ window.__startPlay = function () {
     if (run) return;
     if (!gSeq) { gameError('Load a sequence first.'); return; }
     try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (e) { /* ignore */ }
+    if (mode === 'play' && micMode() && !mic.on) {
+      enableMic().then(function (ok) {
+        if (ok) startRun('play');
+        else gameError('The microphone could not be turned on. See the message above the level bar.');
+      });
+      return;
+    }
     ensureAudio().then(function () {
       if (run) return;
       if (!ctx || ctx.state !== 'running') { gameError('Audio is not running yet. Click anywhere on the page, then try again.'); return; }
       gameError('');
-      var tl = G.buildTimeline({ items: gSeq.items, loops: gs.loops, tempo: gs.tempo, beatsPerBar: gs.beats, ghostRests: gs.ghost, startTime: ctx.currentTime + 0.6 });
+      var tl = G.buildTimeline({ items: gSeq.items, loops: gs.loops, tempo: gs.tempo, beatsPerBar: gs.beats, ghostRests: ghostOn(), startTime: ctx.currentTime + 0.6 });
       var gain = ctx.createGain();
       gain.connect(ctx.destination);
-      tl.beats.forEach(function (b) { if (b.countIn || gs.metro || mode === 'demo') click(b.time, b.isBar, gain); });
+      var micRun = mode === 'play' && micMode();
+      var clicksOn = micRun ? (gs.metro && gs.micPhones) : gs.metro; // no speaker clicks in microphone mode, the microphone would hear them
+      tl.beats.forEach(function (b) { if (b.countIn || clicksOn || mode === 'demo') click(b.time, b.isBar, gain); });
       if (mode === 'demo') tl.notes.forEach(function (n) { playAt(n.time, gs.voice, n.type === 'ghost' ? 0.12 : 1, gain); });
       var windows = G.windowsFor(gs.difficulty);
       run = {
-        mode: mode, tl: tl, gain: gain, windows: windows, last: null, raf: 0, heard: 0, hb: 0, hn: 0,
-        judge: mode === 'play' ? G.createJudge({ notes: tl.notes, windows: windows, offsetSec: settings.offsetMs / 1000 }) : null
+        mode: mode, tl: tl, gain: gain, windows: windows, last: null, raf: 0, heard: 0, hb: 0, hn: 0, input: micRun ? 'mic' : 'device', clicksOn: clicksOn, offsetSec: offsetFor(micRun) / 1000,
+        judge: mode === 'play' ? G.createJudge({ notes: tl.notes, windows: windows, offsetSec: offsetFor(micRun) / 1000 }) : null
       };
       $('g-result').hidden = true;
       updateHud();
@@ -1260,12 +1531,13 @@ window.__startPlay = function () {
 
   // beats (as the metronome is heard) and, when listening, the notes: pulse length = importance
   function fireHaptics(heard) {
+    if (run.input === 'mic') return; // the vibration motor would be heard by the microphone
     var tl = run.tl;
     var level = 0;
     var fresh = function (t) { return heard - t <= 0.12; }; // never replay old pulses (tab was in the background, etc.)
     while (run.hb < tl.beats.length && tl.beats[run.hb].time <= heard) {
       var bt = tl.beats[run.hb++];
-      if (fresh(bt.time) && (bt.countIn || gs.metro || run.mode === 'demo')) level = Math.max(level, bt.isBar ? 4 : 3);
+      if (fresh(bt.time) && (bt.countIn || run.clicksOn || run.mode === 'demo')) level = Math.max(level, bt.isBar ? 4 : 3);
     }
     if (run.mode === 'demo') {
       while (run.hn < tl.notes.length && tl.notes[run.hn].time <= heard) {
@@ -1278,9 +1550,9 @@ window.__startPlay = function () {
 
   function gameHit(ev, b) {
     if (!run || !run.judge || !ctx) return;
-    var heard = A.perfToAudioTime(ctx, ev.timeStamp);
+    var heard = ev.heard != null ? ev.heard : A.perfToAudioTime(ctx, ev.timeStamp); // microphone hits come with their own time
     var tl = run.tl;
-    var off = settings.offsetMs / 1000;
+    var off = run.offsetSec;
     if (heard - off < tl.seqStart - run.windows.good - 0.1) return; // count-in: ignored
     if (heard - off > tl.endTime + 0.4) return;
     var r = run.judge.hit(heard, !!b.ghost);
@@ -1350,16 +1622,16 @@ window.__startPlay = function () {
     if (st.hitCount >= 6 && Math.abs(mean) >= 12) {
       var tip = document.createElement('div');
       tip.className = 'muted';
-      tip.textContent = 'On average you hit ' + Math.abs(mean) + ' ms ' + (mean > 0 ? 'late' : 'early') + '. If that feels like your setup rather than your playing, shift the latency offset by ' + (mean > 0 ? '+' : '') + mean + ' ms.';
+      tip.textContent = 'On average you hit ' + Math.abs(mean) + ' ms ' + (mean > 0 ? 'late' : 'early') + '. If that feels like your setup rather than your playing, shift the ' + (r.input === 'mic' ? 'microphone ' : '') + 'latency offset by ' + (mean > 0 ? '+' : '') + mean + ' ms.';
       var ap = document.createElement('button');
       ap.className = 'small';
       ap.style.marginTop = '6px';
       ap.textContent = 'Apply ' + (mean > 0 ? '+' : '') + mean + ' ms to the offset';
       ap.onclick = function () {
-        settings.offsetMs = Math.max(-150, Math.min(150, Math.round(settings.offsetMs + mean)));
-        showOffset(); save();
+        var isMic = r.input === 'mic';
+        setOffsetFor(isMic, offsetFor(isMic) + mean);
         ap.disabled = true;
-        ap.textContent = 'Offset is now ' + (settings.offsetMs > 0 ? '+' : '') + settings.offsetMs + ' ms';
+        ap.textContent = 'Offset is now ' + fmtMs(offsetFor(isMic));
       };
       box.appendChild(tip);
       box.appendChild(ap);
