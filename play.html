@@ -5,9 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111827">
 <title>ABEL Play – Input setup</title>
+<script>
+  // same saved preference as the home page (key "abel:theme"); dark is the default
+  (function () {
+    var light = false;
+    try { light = localStorage.getItem('abel:theme') === 'light'; } catch (e) { /* default */ }
+    document.documentElement.setAttribute('data-theme', light ? 'light' : 'dark');
+    if (light) {
+      var m = document.querySelector('meta[name="theme-color"]');
+      if (m) m.setAttribute('content', '#f3f4f6');
+    }
+  })();
+</script>
 <style>
   :root {
     --bg: #111827; --card: #1f2937; --card2: #374151; --line: #4b5563; --text: #f9fafb; --muted: #9ca3af;
+    --sunk: #111827; --deep: #0b1220; --hover: #4b5563; --chip: #243047; --link: #93c5fd; --sumhover: #263244; --rowline: #374151;
     --purple: #9333ea; --purple2: #7e22ce; --green: #16a34a; --green2: #15803d; --red: #dc2626; --amber: #f59e0b;
   }
   :root { color-scheme: dark; }
@@ -22,7 +35,7 @@
   h1 { font-size: 1.8rem; margin: 6px 0 2px; }
   h2 { font-size: 1.15rem; margin: 0 0 8px; }
   p { margin: 0 0 8px; }
-  a { color: #93c5fd; }
+  a { color: var(--link); }
   .muted { color: var(--muted); font-size: .9rem; }
   .card { background: var(--card); border-radius: 12px; padding: 14px; margin: 12px 0; }
   .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -32,29 +45,30 @@
     min-height: 44px; padding: 0 16px; border: 0; border-radius: 10px; background: var(--card2);
     cursor: pointer; font-weight: 700;
   }
-  button:hover { background: #4b5563; }
+  button:hover { background: var(--hover); }
   button:disabled { opacity: .5; cursor: not-allowed; }
   button.primary { background: var(--green); } button.primary:hover { background: var(--green2); }
   button.accent { background: var(--purple); } button.accent:hover { background: var(--purple2); }
   button.danger { background: var(--red); }
+  button.primary, button.accent, button.danger { color: #fff; }
   button.small { min-height: 36px; padding: 0 12px; font-size: .9rem; }
   select { min-height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--card2); padding: 0 10px; max-width: 100%; }
   input[type=range] { width: 100%; min-height: 32px; accent-color: var(--purple); }
-  .msg { padding: 8px 10px; border-radius: 8px; background: #111827; border: 1px solid var(--line); margin-top: 8px; font-size: .92rem; }
+  .msg { padding: 8px 10px; border-radius: 8px; background: var(--sunk); border: 1px solid var(--line); margin-top: 8px; font-size: .92rem; }
   .msg.ok { border-color: #166534; } .msg.warn { border-color: #b45309; } .msg.bad { border-color: #991b1b; }
-  .dev { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid #374151; }
+  .dev { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--rowline); }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: #6b7280; flex: 0 0 auto; }
   .dot.on { background: #22c55e; }
-  .bind { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid #374151; }
+  .bind { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--rowline); }
   .bind .what { flex: 1 1 220px; min-width: 0; }
   .bind .what b { font-weight: 700; }
-  .tag { display: inline-block; font-size: .75rem; padding: 1px 8px; border-radius: 999px; background: #4b5563; margin-left: 6px; }
-  .tag.ghost { background: #6d28d9; }
-  #log { font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #0b1220; border-radius: 8px; padding: 8px; height: 250px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; }
+  .tag { display: inline-block; font-size: .75rem; padding: 1px 8px; border-radius: 999px; background: var(--line); color: var(--text); margin-left: 6px; }
+  .tag.ghost { background: #6d28d9; color: #fff; }
+  #log { font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--deep); border-radius: 8px; padding: 8px; height: 250px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; }
   #log .hit { color: #86efac; } #log .unbound { color: #fcd34d; } #log .sys { color: #93c5fd; } #log .other { color: #9ca3af; }
   .pads { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
   .pad { min-height: 64px; background: var(--card2); transition: transform .08s, background .08s; }
-  .pad.flash { background: var(--purple); transform: scale(1.06); }
+  .pad.flash { background: var(--purple); color: #fff; transform: scale(1.06); }
   .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .65); display: none; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 16px 10px; z-index: 50; }
   .overlay.open { display: flex; }
   .panel { background: var(--card); border-radius: 14px; padding: 16px; width: 100%; max-width: 520px; border: 1px solid var(--line); }
@@ -64,22 +78,22 @@
   .seg label { flex: 1 1 120px; }
   .seg input { position: absolute; opacity: 0; pointer-events: none; }
   .seg span { display: flex; align-items: center; justify-content: center; text-align: center; min-height: 44px; padding: 4px 10px; border-radius: 10px; background: var(--card2); cursor: pointer; font-weight: 700; }
-  .seg input:checked + span { background: var(--purple); }
+  .seg input:checked + span { background: var(--purple); color: #fff; }
   .seg input:focus-visible + span { outline: 2px solid #fff; }
   .learned { font-weight: 700; color: #86efac; }
   label.check { display: flex; align-items: center; gap: 10px; min-height: 40px; cursor: pointer; }
   label.check input { width: 22px; height: 22px; accent-color: var(--purple); }
   .big { font-size: 1.3rem; font-weight: 800; }
-  textarea.seq { width: 100%; min-height: 64px; resize: vertical; background: #0b1220; color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: 16px ui-monospace, Consolas, monospace; }
+  textarea.seq { width: 100%; min-height: 64px; resize: vertical; background: var(--deep); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: 16px ui-monospace, Consolas, monospace; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .chip { min-height: 36px; padding: 0 12px; font-size: .88rem; border-radius: 999px; background: #243047; }
+  .chip { min-height: 36px; padding: 0 12px; font-size: .88rem; border-radius: 999px; background: var(--chip); }
   .sgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 14px; margin: 12px 0; align-items: end; }
   .sgrid label.t { display: block; font-weight: 700; font-size: .9rem; margin-bottom: 4px; }
   .hud { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 8px; text-align: center; }
-  .hud div { background: #111827; border-radius: 10px; padding: 6px 4px; }
+  .hud div { background: var(--sunk); border-radius: 10px; padding: 6px 4px; }
   .hud .v { font-size: 1.5rem; font-weight: 800; line-height: 1.2; }
   .hud .k { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
-  #g-canvas { width: 100%; height: min(62vh, 460px); display: block; background: #0b1220; border-radius: 12px; touch-action: manipulation; }
+  #g-canvas { width: 100%; height: min(62vh, 460px); display: block; background: var(--deep); border-radius: 12px; touch-action: manipulation; }
   .result { margin-top: 10px; }
   .tappad { display: block; width: 100%; height: min(24vh, 170px); min-height: 96px; margin-top: 10px; border-radius: 16px; border: 0; color: #fff;
     background: linear-gradient(180deg, #7e22ce, #581c87); font-size: 1.7rem; font-weight: 900; letter-spacing: .12em;
@@ -103,11 +117,39 @@
   details.card > summary::-webkit-details-marker { display: none; }
   details.card > summary::before { content: "▸"; color: var(--muted); width: 1em; flex: 0 0 auto; transition: transform .15s; }
   details.card[open] > summary::before { transform: rotate(90deg); }
-  details.card > summary:hover { background: #263244; }
+  details.card > summary:hover { background: var(--sumhover); }
   details.card > summary .t { font-size: 1.1rem; font-weight: 700; }
   details.card > summary .muted { flex: 1 1 200px; }
   details.card > .body { padding: 0 14px 14px; }
   @media (prefers-reduced-motion: reduce) { .pad, details.card > summary::before { transition: none; } .pad.flash, .tappad.down { transform: none; } }
+  .copybox { width: 100%; margin-top: 8px; background: var(--deep); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: 12px ui-monospace, Consolas, monospace; }
+  /* page header: tools, site link, copyright (same look as the home page) */
+  .topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .topbar h1 { min-width: 0; }
+  /* title colours, same as the home page (green, yellow, white; adjusted for the light theme) */
+  h1 .tg { color: #4ade80; } h1 .ty { color: #facc15; } h1 .tw { color: #ffffff; }
+  html[data-theme="light"] h1 .tg { color: #16a34a; } html[data-theme="light"] h1 .ty { color: #ca8a04; } html[data-theme="light"] h1 .tw { color: #111827; }
+  .toolbar { display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); flex: 0 0 auto; }
+  .toolbar button { width: 44px; height: 44px; min-height: 0; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: transparent; font-size: 1.25rem; line-height: 1; }
+  .toolbar button:hover { background: var(--hover); }
+  .toolbar svg { display: block; }
+  .brandrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 6px 0 12px; }
+  .sitelink { display: inline-flex; align-items: center; gap: 8px; padding: 0 16px; height: 40px; border-radius: 999px; font-weight: 700; font-size: .9rem; color: #111827; text-decoration: none; background-image: linear-gradient(90deg, #4ade80, #facc15); box-shadow: 0 4px 6px rgba(0, 0, 0, .25); transition: transform .12s; }
+  .sitelink:hover { transform: translateY(-2px); }
+  .sitelink:active { transform: none; }
+  .sitelink:focus-visible { outline-color: #fff; }
+  .brandrow .muted { font-size: .8rem; }
+  /* light theme */
+  html[data-theme="light"] { color-scheme: light; --bg: #f3f4f6; --card: #ffffff; --card2: #e5e7eb; --line: #d1d5db; --text: #111827; --muted: #4b5563; --sunk: #f3f4f6; --deep: #f9fafb; --hover: #d1d5db; --chip: #e5e7eb; --link: #1d4ed8; --sumhover: #f3f4f6; --rowline: #e5e7eb; }
+  html[data-theme="light"] .card, html[data-theme="light"] .toolbar { box-shadow: 0 0 0 1px rgba(0, 0, 0, .07); }
+  html[data-theme="light"] #log .hit, html[data-theme="light"] .learned { color: #15803d; }
+  html[data-theme="light"] #log .unbound { color: #b45309; }
+  html[data-theme="light"] #log .sys { color: #1d4ed8; }
+  html[data-theme="light"] #log .other { color: #6b7280; }
+  html[data-theme="light"] .msg.ok { border-color: #86efac; }
+  html[data-theme="light"] .msg.warn { border-color: #f59e0b; }
+  html[data-theme="light"] .msg.bad { border-color: #fca5a5; }
+  html[data-theme="light"] .overlay { background: rgba(17, 24, 39, .45); }
   .counts { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0; font-weight: 700; }
 </style>
 </head>
@@ -116,7 +158,22 @@
   <div id="load-error" class="msg bad" role="alert" hidden></div>
   <header>
     <p class="muted"><a href="./index.html">← Back to ABEL</a></p>
-    <h1>ABEL Play</h1>
+    <div class="topbar">
+      <h1 aria-label="ABEL Play"><span class="tg">A</span><span class="ty">B</span><span class="tw">E</span><span class="tw">L</span> <span class="tw">P</span><span class="tw">l</span><span class="tg">a</span><span class="tw">y</span></h1>
+      <div class="toolbar" role="group" aria-label="Page tools">
+        <button id="btn-share" type="button" aria-label="Share this app" title="Share this app">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+        </button>
+        <button id="btn-theme" type="button" aria-label="Switch to light theme" title="Switch to light theme"><span aria-hidden="true">☀️</span></button>
+      </div>
+    </div>
+    <div class="brandrow">
+      <a class="sitelink" href="https://www.abeldominoes.com" target="_blank" rel="noopener noreferrer" title="Discover ABEL Dominoes">abeldominoes.com
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+      </a>
+      <span class="muted">© 2026 Hughes José Gallez. All rights reserved.</span>
+      <span id="share-toast" class="muted" role="status"></span>
+    </div>
     <p class="muted">Play ABEL on any device with your screen, your keyboard or on a MIDI instrument.</p>
   </header>
 
@@ -234,7 +291,7 @@
       <button id="btn-log-copy" class="small">Copy log</button>
     </div>
     <div id="log" role="log" aria-live="off"></div>
-    <textarea id="copy-box" hidden rows="6" style="width:100%;margin-top:8px;background:#0b1220;color:#e5e7eb;border:1px solid #4b5563;border-radius:8px;padding:8px;font:12px ui-monospace,Consolas,monospace" aria-label="Log text to copy"></textarea>
+    <textarea id="copy-box" hidden rows="6" class="copybox" aria-label="Log text to copy"></textarea>
     <p class="muted" style="margin-top:6px">Copy the log and send it to <a href="mailto:hello@abeldominoes.com">hello@abeldominoes.com</a> if something does not behave as expected.</p>
     </div>
   </details>
@@ -301,6 +358,53 @@ window.__startPlay = function () {
 
   var VOICE_NAMES = {};
   Object.keys(S.INSTRUMENTS).forEach(function (k) { VOICE_NAMES[k] = S.INSTRUMENTS[k].name; });
+
+  /* ---------------------------------------------------------------- theme + share */
+  var THEME_KEY = 'abel:theme'; // same key as the home page
+  function isLight() { return document.documentElement.getAttribute('data-theme') === 'light'; }
+  function showTheme() {
+    var light = isLight();
+    var b = $('btn-theme');
+    var label = light ? 'Switch to dark theme' : 'Switch to light theme';
+    b.setAttribute('aria-label', label);
+    b.title = label;
+    b.firstChild.textContent = light ? '🌙' : '☀️';
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.setAttribute('content', light ? '#f3f4f6' : '#111827');
+  }
+  $('btn-theme').onclick = function () {
+    var next = !isLight();
+    document.documentElement.setAttribute('data-theme', next ? 'light' : 'dark');
+    try { window.localStorage.setItem(THEME_KEY, next ? 'light' : 'dark'); } catch (e) { /* not saved */ }
+    showTheme();
+    if (!run) drawScene(null);
+  };
+  showTheme();
+
+  var toastTimer = null;
+  function toast(text) {
+    var el = $('share-toast');
+    el.textContent = text;
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.textContent = ''; }, 3000);
+  }
+  $('btn-share').onclick = function () {
+    var url = window.location.href.split('#')[0];
+    var copy = function () {
+      var done = function () { toast('Link copied'); };
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, function () { window.prompt('Copy this link to share ABEL Play:', url); });
+        else window.prompt('Copy this link to share ABEL Play:', url);
+      } catch (e) { window.prompt('Copy this link to share ABEL Play:', url); }
+    };
+    if (navigator.share) {
+      navigator.share({ title: 'ABEL Play', text: 'ABEL Play: play rhythm patterns', url: url }).catch(function (e) {
+        if (!(e && e.name === 'AbortError')) copy();
+      });
+    } else {
+      copy();
+    }
+  };
 
   /* ---------------------------------------------------------------- settings */
   var settings = A.loadSettings();
@@ -1224,32 +1328,37 @@ window.__startPlay = function () {
   }
   function drawScene(t) {
     var d = sizeCanvas();
+    var L = isLight();
+    var P = L
+      ? { bg: '#f9fafb', track: '#ffffff', rail: '#d1d5db', beat: 'rgba(75,85,99,.25)', barLine: 'rgba(126,34,206,.55)', barText: '#7e22ce', muted: '#4b5563', count: 'rgba(17,24,39,.85)', ring: '#7e22ce', noteStroke: 'rgba(0,0,0,.35)' }
+      : { bg: '#0b1220', track: '#111c30', rail: '#374151', beat: 'rgba(156,163,175,.25)', barLine: 'rgba(216,180,254,.75)', barText: '#d8b4fe', muted: '#9ca3af', count: 'rgba(249,250,251,.9)', ring: 'rgba(216,180,254,.8)', noteStroke: 'rgba(255,255,255,.85)' };
+    var fix = function (c) { return L && (c === '#fff' || c === '#ffffff') ? '#374151' : c; };
     var W = d.w, H = d.h;
     var g = g2;
     g.clearRect(0, 0, W, H);
-    g.fillStyle = '#0b1220';
+    g.fillStyle = P.bg;
     g.fillRect(0, 0, W, H);
     var trackW = Math.min(260, W * 0.7);
     var x0 = (W - trackW) / 2;
     var cx = W / 2;
     var hitY = H * 0.8;
     var pps = (hitY + 30) / LOOKAHEAD;
-    g.fillStyle = '#111c30';
+    g.fillStyle = P.track;
     g.fillRect(x0, 0, trackW, H);
-    g.fillStyle = '#374151';
+    g.fillStyle = P.rail;
     g.fillRect(x0 - 2, 0, 2, H);
     g.fillRect(x0 + trackW, 0, 2, H);
     function hitLine() {
       g.strokeStyle = '#9333ea';
       g.lineWidth = 4;
       g.beginPath(); g.moveTo(x0 - 6, hitY); g.lineTo(x0 + trackW + 6, hitY); g.stroke();
-      g.strokeStyle = 'rgba(216,180,254,.8)';
+      g.strokeStyle = P.ring;
       g.lineWidth = 2;
       g.beginPath(); g.arc(cx, hitY, 20, 0, Math.PI * 2); g.stroke();
     }
     if (!run || t == null) {
       hitLine();
-      g.fillStyle = '#9ca3af';
+      g.fillStyle = P.muted;
       g.font = '15px system-ui, sans-serif';
       g.textAlign = 'center';
       g.fillText(gSeq ? 'Press Play, or “Listen first”' : 'Load a sequence to begin', cx, H * 0.4);
@@ -1262,16 +1371,16 @@ window.__startPlay = function () {
     tl.beats.forEach(function (b) {
       var y = hitY - (b.time - t) * pps;
       if (y < -20 || y > H + 20) return;
-      g.strokeStyle = b.isBar ? 'rgba(216,180,254,.75)' : 'rgba(156,163,175,.25)';
+      g.strokeStyle = b.isBar ? P.barLine : P.beat;
       g.lineWidth = b.isBar ? 2 : 1;
       g.beginPath(); g.moveTo(x0, y); g.lineTo(x0 + trackW, y); g.stroke();
       if (!b.countIn) {
         var it = items[b.index % items.length];
-        g.fillStyle = it.color || '#9ca3af';
+        g.fillStyle = fix(it.color) || P.muted;
         g.textAlign = 'right';
         g.fillText(it.label, x0 - 8, y - 4);
         if (b.isBar) {
-          g.fillStyle = '#d8b4fe';
+          g.fillStyle = P.barText;
           g.textAlign = 'left';
           g.fillText('bar ' + b.bar, x0 + trackW + 8, y - 4);
         }
@@ -1312,13 +1421,13 @@ window.__startPlay = function () {
         return;
       }
       if (n.type === 'ghost') {
-        g.fillStyle = rgba(n.color, 0.15);
-        g.strokeStyle = rgba(n.color, 0.85);
+        g.fillStyle = rgba(fix(n.color), 0.15);
+        g.strokeStyle = rgba(fix(n.color), 0.85);
         g.lineWidth = 2;
         g.beginPath(); g.arc(cx, y, 10, 0, Math.PI * 2); g.fill(); g.stroke();
       } else {
         g.fillStyle = n.color;
-        g.strokeStyle = n.color === '#ffffff' ? '#6b7280' : 'rgba(255,255,255,.85)';
+        g.strokeStyle = n.color === '#ffffff' ? '#6b7280' : P.noteStroke;
         g.lineWidth = 2;
         g.beginPath(); g.arc(cx, y, 15, 0, Math.PI * 2); g.fill(); g.stroke();
       }
@@ -1327,7 +1436,7 @@ window.__startPlay = function () {
     // count-in number
     if (t < tl.seqStart) {
       var n = Math.min(tl.countIn, Math.max(1, Math.ceil((tl.seqStart - t) / tl.beat)));
-      g.fillStyle = 'rgba(249,250,251,.9)';
+      g.fillStyle = P.count;
       g.font = 'bold 72px system-ui, sans-serif';
       g.textAlign = 'center';
       g.fillText(tl.countIn ? String(n) : 'Go', cx, H * 0.4);

@@ -1,6 +1,6 @@
 // Bump VERSION whenever you deploy changes so installed copies refresh.
-const VERSION = 'abel-v32';
-const CORE = ['./index.html', './manifest.webmanifest',
+const VERSION = 'abel-v33';
+const CORE = ['./index.html', './play.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
