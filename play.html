@@ -231,7 +231,7 @@
   <section class="card" aria-labelledby="h-game">
     <h2 id="h-game">▶ Play a sequence</h2>
     <label for="g-seq" class="muted" style="display:block;margin-bottom:6px">Type the letters of a sequence (for example <b>A,B',F+K,D</b>) or paste the link from ABEL's “Share link” button.</label>
-    <textarea id="g-seq" class="seq" rows="2" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="A,B,C,D"></textarea>
+    <textarea id="g-seq" class="seq" rows="2" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="A,B,E,L"></textarea>
     <div class="row" style="margin-top:8px">
       <button id="g-load" class="accent small">Load sequence</button>
       <span id="g-summary" class="muted grow"></span>
@@ -1064,7 +1064,7 @@ window.__startPlay = function () {
   function lsSet(k, v) { try { window.localStorage.setItem(k, v); } catch (e) { memStore[k] = v; } }
 
   var GS_KEY = 'abel:play:settings:v1';
-  var gs = { tempo: 80, loops: 2, beats: 4, difficulty: 'normal', metro: true, ghost: false, voice: 'snare', seq: 'A,B,C,D', pad: false, flip: false, view: 'highway', st: { on: false, start: 60, target: 100, step: 5, per: 2 } };
+  var gs = { tempo: 80, loops: 2, beats: 4, difficulty: 'normal', metro: true, ghost: false, voice: 'snare', seq: 'A,B,E,L', pad: false, flip: false, view: 'highway', st: { on: false, start: 60, target: 100, step: 5, per: 2 } };
   var padChosen = false;
   try {
     var savedGs = JSON.parse(lsGet(GS_KEY) || 'null');
