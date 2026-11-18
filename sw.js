@@ -1,5 +1,5 @@
 // Bump VERSION whenever you deploy changes so installed copies refresh.
-const VERSION = 'abel-v33';
+const VERSION = 'abel-v34';
 const CORE = ['./index.html', './play.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
