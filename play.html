@@ -86,6 +86,7 @@
   .tappad[hidden], .padrow[hidden] { display: none; }
   .padrow { display: flex; gap: 10px; margin-top: 10px; }
   .padrow .tappad { margin-top: 0; width: auto; }
+  .padrow.flip { flex-direction: row-reverse; }
   #g-pad { flex: 3 1 0; }
   #g-pad-soft { flex: 1 1 0; background: linear-gradient(180deg, #4b5563, #374151); font-size: .95rem; letter-spacing: .03em; line-height: 1.25; padding: 0 4px; }
   #g-pad-soft.down { background: #6b7280; }
@@ -126,8 +127,9 @@
     </div>
     <label class="check"><input type="checkbox" id="g-metro" checked> Metronome clicks during the game</label>
     <label class="check"><input type="checkbox" id="g-ghost"> Rests are ghost notes (play them with a ghost key or pad)</label>
-    <div id="g-ghost-note" class="msg" hidden>Ghost notes: tap the small <b>soft tap</b> pad (on the right) for the rests, and the big pad for the notes.</div>
+    <div id="g-ghost-note" class="msg" hidden>Ghost notes: tap the small <b>soft tap</b> pad (on the <span id="g-side">right</span>) for the rests, and the big pad for the notes.</div>
     <label class="check"><input type="checkbox" id="g-pad-on"> Show a tap pad on the screen (for phones and tablets without a keyboard or MIDI pad)</label>
+    <label class="check" id="g-flip-wrap" hidden><input type="checkbox" id="g-flip"> Put the soft tap pad on the left (for left-handed play)</label>
 
     <div class="row" style="margin-top:10px">
       <button id="g-play" class="primary" disabled>▶ Play</button>
@@ -828,7 +830,7 @@ window.__startPlay = function () {
   function lsSet(k, v) { try { window.localStorage.setItem(k, v); } catch (e) { memStore[k] = v; } }
 
   var GS_KEY = 'abel:play:settings:v1';
-  var gs = { tempo: 80, loops: 2, beats: 4, difficulty: 'normal', metro: true, ghost: false, voice: 'snare', seq: 'A,B,C,D', pad: false };
+  var gs = { tempo: 80, loops: 2, beats: 4, difficulty: 'normal', metro: true, ghost: false, voice: 'snare', seq: 'A,B,C,D', pad: false, flip: false };
   var padChosen = false;
   try {
     var savedGs = JSON.parse(lsGet(GS_KEY) || 'null');
@@ -837,6 +839,7 @@ window.__startPlay = function () {
       if (G.DIFFICULTY[savedGs.difficulty]) gs.difficulty = savedGs.difficulty;
       if (typeof savedGs.metro === 'boolean') gs.metro = savedGs.metro;
       if (typeof savedGs.ghost === 'boolean') gs.ghost = savedGs.ghost;
+      if (typeof savedGs.flip === 'boolean') gs.flip = savedGs.flip;
       if (typeof savedGs.pad === 'boolean') { gs.pad = savedGs.pad; padChosen = true; }
       if (S.INSTRUMENTS[savedGs.voice]) gs.voice = savedGs.voice;
       if (typeof savedGs.seq === 'string' && savedGs.seq) gs.seq = savedGs.seq.slice(0, 600);
@@ -889,11 +892,16 @@ window.__startPlay = function () {
   $('g-metro').onchange = function () { gs.metro = $('g-metro').checked; saveGs(); };
   $('g-ghost').onchange = function () { gs.ghost = $('g-ghost').checked; saveGs(); updateBest(); applyPad(); };
   $('g-pad-on').onchange = function () { gs.pad = $('g-pad-on').checked; saveGs(); applyPad(); };
+  $('g-flip').onchange = function () { gs.flip = $('g-flip').checked; saveGs(); applyPad(); };
 
   /* ---- on-screen tap pad (phones and tablets): normal hits only, no ghost notes */
   function applyPad() {
     $('g-pad-on').checked = gs.pad;
     $('g-pads').hidden = !gs.pad;
+    $('g-pads').classList.toggle('flip', !!gs.flip); // the soft pad goes to the left
+    $('g-flip').checked = !!gs.flip;
+    $('g-flip-wrap').hidden = !(gs.pad && gs.ghost);
+    $('g-side').textContent = gs.flip ? 'left' : 'right';
     $('g-pad-soft').hidden = !(gs.pad && gs.ghost);
     $('g-ghost-note').hidden = !(gs.pad && gs.ghost);
     $('g-hint').textContent = gs.pad
