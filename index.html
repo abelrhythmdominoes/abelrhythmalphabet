@@ -2136,7 +2136,7 @@ const ABELRhythmDominoes = () => {
     clearLit();
   };
 
-  const startPlayback = (mode, pattern) => {
+  const startPlayback = (mode, pattern, keepPos = false) => {
     const ctx = ctxRef.current;
     if (!ctx) return;
     if (ctx.state !== 'running') {
@@ -2156,8 +2156,14 @@ const ABELRhythmDominoes = () => {
 
     playRef.current = { mode, pattern };
     segmentsRef.current = [];
-    beatCountRef.current = 0;
-    seqPosRef.current = 0;
+    if (keepPos) {
+      // tempo change: replay the beat that was playing instead of jumping back to the start
+      beatCountRef.current = Math.max(0, keepPos.beatCount - 1);
+      seqPosRef.current = Math.max(0, keepPos.seqPos - 1);
+    } else {
+      beatCountRef.current = 0;
+      seqPosRef.current = 0;
+    }
     nextBeatRef.current = ctx.currentTime + 0.08;
 
     scheduler();
@@ -2298,16 +2304,23 @@ const ABELRhythmDominoes = () => {
 
   const clampTempo = (v) => Math.min(300, Math.max(1, Math.round(v)));
 
+  const tempoRestartRef = useRef(null);
   const changeTempo = (v) => {
     const next = clampTempo(v);
     setTempo(next);
     settingsRef.current.tempo = next; // the very next scheduled beat already uses it
-    const ctx = ctxRef.current;
-    const p = playRef.current;
-    if (p && ctx && nextBeatRef.current - ctx.currentTime > 1) {
-      // a long beat (slow tempo) is already queued: restart so the new tempo is heard right away
-      startPlayback(p.mode, p.pattern);
-    }
+    // A long beat (slow tempo) is already queued with the old speed. Restarting on every single change
+    // (hold on +/-, slider drag) kept cutting the playback off, so wait until the changes stop (150 ms),
+    // then restart once, resuming at the same beat.
+    clearTimeout(tempoRestartRef.current);
+    tempoRestartRef.current = setTimeout(() => {
+      tempoRestartRef.current = null;
+      const ctx = ctxRef.current;
+      const p = playRef.current;
+      if (p && ctx && nextBeatRef.current - ctx.currentTime > 1) {
+        startPlayback(p.mode, p.pattern, { beatCount: beatCountRef.current, seqPos: seqPosRef.current });
+      }
+    }, 150);
   };
 
   const commitTempoDraft = () => {
@@ -2336,7 +2349,7 @@ const ABELRhythmDominoes = () => {
       tempoHoldRef.current.i = setInterval(step, 70);
     }, 400);
   };
-  useEffect(() => () => stopTempoHold(), []);
+  useEffect(() => () => { stopTempoHold(); clearTimeout(tempoRestartRef.current); }, []);
 
   // ---------- Quick merge: long-press a pattern, then tap a second one ----------
   const [mergeFirst, setMergeFirst] = useState(null);
