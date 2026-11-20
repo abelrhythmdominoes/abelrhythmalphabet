@@ -1768,6 +1768,21 @@ const ABELRhythmDominoes = () => {
     };
   }, []);
   const [beatsPerBar, setBeatsPerBar] = useState(4);
+  // Count-in: one bar of clicks (one per beat of the bar) before the sequence starts. Off by default.
+  const [countInOn, setCountInOn] = useState(() => {
+    try {
+      return localStorage.getItem('abel:countin') === '1';
+    } catch (e) {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('abel:countin', countInOn ? '1' : '0');
+    } catch (e) {
+      /* preference could not be saved: ignore */
+    }
+  }, [countInOn]);
   const [selectedInstrument, setSelectedInstrument] = useState('snare');
   const [selectedPattern, setSelectedPattern] = useState(null);
   const [playKind, setPlayKind] = useState(null); // null | 'solo' | 'sequence' | 'fused' | 'layers'
@@ -1795,6 +1810,8 @@ const ABELRhythmDominoes = () => {
   const nextBeatRef = useRef(0);
   const beatCountRef = useRef(0);
   const seqPosRef = useRef(0);
+  const countLeftRef = useRef(0); // count-in beats still to schedule
+  const countShownRef = useRef('');
   const segIdRef = useRef(0);
   const segmentsRef = useRef([]);
   const playRef = useRef(null);
@@ -1813,7 +1830,8 @@ const ABELRhythmDominoes = () => {
     ghost: ghostNotesEnabled,
     instrument: selectedInstrument,
     sync: syncOffset,
-    beats: beatsPerBar
+    beats: beatsPerBar,
+    countIn: countInOn
   };
   sequenceRef.current = sequence;
   fusedRef.current = fusedPattern;
@@ -1893,7 +1911,16 @@ const ABELRhythmDominoes = () => {
     });
   };
 
+  const showCount = (v) => {
+    if (countShownRef.current === v) return;
+    countShownRef.current = v;
+    document.querySelectorAll('[data-countnum]').forEach((el) => {
+      el.textContent = v;
+      el.style.opacity = v ? '1' : '0';
+    });
+  };
   const applyBeat = (seg) => {
+    showCount(seg && seg.countLeft ? String(seg.countLeft) : '');
     const els = beatElsRef.current;
     const b = beatLitRef.current;
     if (!seg) {
@@ -1994,6 +2021,18 @@ const ABELRhythmDominoes = () => {
     if (!play || !dest) return false;
 
     const beat = 60 / s.tempo;
+
+    // 0) Count-in: clicks only, one per beat of the bar, the sequence has not started yet
+    if (play.mode === 'sequence' && countLeftRef.current > 0) {
+      const left = countLeftRef.current;
+      const cPos = beatCountRef.current % Math.max(1, s.beats);
+      beatCountRef.current += 1; // after a full bar the sequence starts on beat 1 of a bar
+      countLeftRef.current = left - 1;
+      playClick(ctx, t, cPos === 0, dest, false); // audible even when the metronome is off
+      segmentsRef.current.push({ id: ++segIdRef.current, start: t, dur: beat, ghost: false, metro: true, beatPos: cPos, tracks: [], countLeft: left });
+      nextBeatRef.current = t + beat;
+      return true;
+    }
 
     // 1) Decide which tracks play on this beat
     const defs = [];
@@ -2133,6 +2172,8 @@ const ABELRhythmDominoes = () => {
       }, 150);
     }
     masterRef.current = null;
+    countLeftRef.current = 0;
+    showCount('');
     hapticLastRef.current = { segId: null, steps: [] };
     safeVibrate(0); // cancel any vibration in progress
     clearLit();
@@ -2166,6 +2207,10 @@ const ABELRhythmDominoes = () => {
       beatCountRef.current = 0;
       seqPosRef.current = 0;
     }
+    countLeftRef.current =
+      !keepPos && mode === 'sequence' && settingsRef.current.countIn && sequenceRef.current.length > 0
+        ? Math.max(1, settingsRef.current.beats)
+        : 0;
     nextBeatRef.current = ctx.currentTime + 0.08;
 
     scheduler();
@@ -2320,7 +2365,7 @@ const ABELRhythmDominoes = () => {
       const ctx = ctxRef.current;
       const p = playRef.current;
       if (p && ctx && nextBeatRef.current - ctx.currentTime > 1) {
-        startPlayback(p.mode, p.pattern, { beatCount: beatCountRef.current, seqPos: seqPosRef.current });
+        startPlayback(p.mode, p.pattern, countLeftRef.current > 0 ? false : { beatCount: beatCountRef.current, seqPos: seqPosRef.current });
       }
     }, 150);
   };
@@ -4238,6 +4283,18 @@ const ABELRhythmDominoes = () => {
                     {playKind === 'sequence' ? <Pause size={16} /> : <Play size={16} />}
                     {playKind === 'sequence' ? 'Stop' : 'Play'} Sequence
                   </button>
+                  <span data-countnum aria-hidden="true" className="font-mono text-2xl font-bold text-green-400 text-center" style={{ opacity: 0, minWidth: '1.5rem' }}></span>
+                  <button
+                    role="switch"
+                    aria-checked={countInOn}
+                    onClick={() => setCountInOn(!countInOn)}
+                    title="Play one bar of clicks (one per beat of the bar) before the sequence starts"
+                    className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
+                      countInOn ? 'bg-purple-600 text-white' : 'bg-gray-700 hover:bg-gray-600'
+                    }`}
+                  >
+                    Count-in {countInOn ? 'On' : 'Off'}
+                  </button>
                   <ExportButtons getScore={() => makeScore('sequence')} disabled={sequence.length === 0} />
                   <button
                     onClick={enterFullscreen}
@@ -4298,6 +4355,7 @@ const ABELRhythmDominoes = () => {
                         {playKind === 'sequence' ? <Pause size={18} /> : <Play size={18} />}
                         {playKind === 'sequence' ? 'Stop' : 'Play'}
                       </button>
+                      <span data-countnum aria-hidden="true" className="font-mono text-2xl font-bold text-green-400 text-center" style={{ opacity: 0, minWidth: '1.5rem' }}></span>
                       <div className="flex-1 min-w-0 flex items-center justify-center gap-1">
                         <button
                           onPointerDown={() => startTempoHold(-1)}
@@ -4349,6 +4407,17 @@ const ABELRhythmDominoes = () => {
                         }`}
                       >
                         Metronome {metronomeEnabled ? 'On' : 'Off'}
+                      </button>
+                      <button
+                        role="switch"
+                        aria-checked={countInOn}
+                        onClick={() => setCountInOn(!countInOn)}
+                        title="Play one bar of clicks before the sequence starts"
+                        className={`h-11 px-3 rounded-lg font-bold whitespace-nowrap transition-colors ${
+                          countInOn ? 'bg-purple-600 text-white' : 'bg-gray-700 hover:bg-gray-600'
+                        }`}
+                      >
+                        Count-in {countInOn ? 'On' : 'Off'}
                       </button>
                       <div
                         ref={fsBeatsRef}
