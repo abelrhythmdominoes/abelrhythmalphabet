@@ -26,16 +26,16 @@ details{background:var(--card);border:1px solid var(--line);border-radius:14px;p
 <p class="muted" style="margin:0"><a href="play.html">← ABEL Play</a> · <a href="index.html">ABEL</a></p>
 <div class="row"><label>Groove <select id="groove"></select></label><label>Speed <select id="speed"><option value="100">100 %</option><option value="80">80 %</option><option value="60">60 %</option><option value="40">40 %</option></select><span id="bpmtxt" class="muted"></span></label>
 <label>View <select id="view"><option value="lanes">Lanes</option><option value="highway">Highway</option></select></label>
-<label>Sound <select id="mix"><option value="drums">Backing + click</option><option value="click">Click only</option></select></label>
+<label>Sound <select id="mix"><option value="click">Click only</option><option value="drums">Click + backing (tracks I don’t play)</option></select></label>
 <label><input type="checkbox" id="cin" checked> Count-in</label></div>
 <div class="row" id="tracks"></div>
 <div class="row"><button id="play">Play</button><button id="listen">Listen</button><button id="stop" disabled>Stop</button><span id="hud"></span></div>
 <canvas id="cv"></canvas><div id="pads"></div><div id="result" aria-live="polite"></div>
 <details id="comp"><summary>Compose your own groove</summary>
-<p class="muted">Tap the cells: 16 steps = one bar of sixteenth-notes (4 beats), repeated 4 times. Changing a preset copies it to “My groove”, saved on this device.</p>
+<p class="muted">Tap the cells: each group of cells is one beat, 4 beats per bar, the bar repeats 4 times. “Subdivision” sets how many cells per beat. Changing a preset copies it to “My groove”, saved on this device.</p>
 <div id="editor"></div>
-<div class="row"><label>Add <select id="addv"></select></label><button id="addbtn">Add instrument</button><label>Tempo <input id="bpm" type="number" min="40" max="200"> BPM</label><button id="reset">Back to the preset</button></div></details>
-<p><small>Tracks you don’t play appear as faint outlines and sound as the backing. Your keys, pads and MIDI drums are the ones set up in ABEL Play (D snare, F kick, J hi-hat, H tom).</small></p>
+<div class="row"><label>Add <select id="addv"></select></label><button id="addbtn">Add instrument</button><label>Subdivision <select id="sub"><option value="1">1 per beat (quarter notes)</option><option value="2">2 per beat (eighths)</option><option value="3">3 per beat (triplets)</option><option value="4">4 per beat (sixteenths)</option><option value="5">5 per beat (quintuplets)</option><option value="6">6 per beat (sextuplets)</option><option value="7">7 per beat (septuplets)</option><option value="8">8 per beat (thirty-seconds)</option></select></label><label>Tempo <input id="bpm" type="number" min="40" max="200"> BPM</label><button id="reset">Back to the preset</button></div><div id="emsg" class="muted" aria-live="polite"></div></details>
+<p><small>In Play you hear only the click; every instrument you play is judged. Choose “Click + backing” to hear the tracks you don’t play. Your keys, pads and MIDI drums are the ones set up in ABEL Play (D snare, F kick, J hi-hat, H tom).</small></p>
 </main><script>/* ABEL generated sounds (inlined) */
 /* ABEL generated sounds (shared by the ABEL app and ABEL Play).
    Same synthesis as in index.html: every instrument is rendered once into a buffer so each hit is identical. */
@@ -708,7 +708,7 @@ details{background:var(--card);border:1px solid var(--line);border-radius:14px;p
   var CUSTOM_KEY = 'abel:drum:custom', custom = null, lastPreset = 0;
   try { custom = JSON.parse(localStorage.getItem(CUSTOM_KEY) || 'null'); if (!custom || !custom.pats) custom = null; } catch (e) { custom = null; }
   function customGroove() {
-    var gr = { name: 'My groove', bpm: custom.bpm, custom: true, order: BUILD.filter(function (v) { return custom.pats[v]; }),
+    var gr = { name: 'My groove', bpm: custom.bpm, custom: true, sub: custom.sub || 4, order: BUILD.filter(function (v) { return custom.pats[v]; }),
       tracks: KIT.filter(function (v) { return custom.pats[v]; }).map(function (v) { return [v, VOICES[v][0], VOICES[v][1], custom.pats[v]]; }) };
     return gr;
   }
@@ -747,10 +747,10 @@ details{background:var(--card);border:1px solid var(--line);border-radius:14px;p
 
   /* ---------- timeline: every track's notes merged and sorted */
   function build(t0) {
-    var bpm = g.bpm * speed / 100, beat = 60 / bpm, step = beat / 4, cin = $('cin').checked ? 4 : 0, N = 64;
-    var r = { beat: beat, step: step, t0: t0, cin: cin, start: t0 + cin * beat, N: N, nb: cin + N / 4, notes: [], byV: {}, first: {} };
+    var bpm = g.bpm * speed / 100, beat = 60 / bpm, sub = g.sub || 4, step = beat / sub, cin = $('cin').checked ? 4 : 0, N = 16 * sub; // 4 bars of 4 beats
+    var r = { beat: beat, step: step, t0: t0, cin: cin, start: t0 + cin * beat, N: N, nb: cin + N / sub, notes: [], byV: {}, first: {} };
     g.tracks.forEach(function (tr) {
-      for (var i = 0; i < N; i++) if (tr[3].charAt(i % 16) === 'x') {
+      for (var i = 0; i < N; i++) if (tr[3].charAt(i % tr[3].length) === 'x') {
         var n = { t: r.start + i * step, v: tr[0], state: 0 }; r.notes.push(n); (r.byV[tr[0]] = r.byV[tr[0]] || []).push(n);
       }
     });
@@ -864,7 +864,7 @@ details{background:var(--card);border:1px solid var(--line);border-radius:14px;p
     }
     var span = Math.max(h, w) / pps + 0.4, lo = 0, hi = r.notes.length, tmin = heard - span;
     while (lo < hi) { var m = (lo + hi) >> 1; if (r.notes[m].t < tmin) lo = m + 1; else hi = m; }
-    var rr = Math.min(lane * 0.36, 15);
+    var rr = Math.min(lane * 0.36, 15, Math.max(3, pps * r.step * 0.45)); // smaller notes on dense grids
     for (var k = lo; k < r.notes.length && r.notes[k].t < heard + span; k++) {
       var nt = r.notes[k];
       var dd = along(nt.t); if (!vis(dd)) continue;
@@ -912,28 +912,29 @@ details{background:var(--card);border:1px solid var(--line);border-radius:14px;p
   }
   function pickGroove(i) {
     if (i === 'custom') {
-      if (!custom) { custom = { bpm: g.bpm, pats: {} }; g.tracks.forEach(function (t) { custom.pats[t[0]] = t[3]; }); saveCustom(); }
+      if (!custom) { custom = { bpm: g.bpm, sub: g.sub || 4, pats: {} }; g.tracks.forEach(function (t) { custom.pats[t[0]] = t[3]; }); saveCustom(); }
       g = customGroove();
     } else { g = GROOVES[+i]; lastPreset = +i; }
     $('groove').value = String(i);
-    setActive(g.order.slice(0, Math.min(2, g.order.length)));
+    setActive(g.order.slice());
     drawEditor();
   }
   // composing: tap the cells (16 sixteenth-notes = one bar, repeated 4 times). Editing a preset copies it to "My groove".
   function edit(fn) {
     if (run) return;
-    if (!g.custom) { custom = { bpm: g.bpm, pats: {} }; g.tracks.forEach(function (t) { custom.pats[t[0]] = t[3]; }); }
+    if (!g.custom) { custom = { bpm: g.bpm, sub: g.sub || 4, pats: {} }; g.tracks.forEach(function (t) { custom.pats[t[0]] = t[3]; }); }
     fn(custom); saveCustom(); g = customGroove();
     var keep = Object.keys(active).filter(function (v) { return active[v] && custom.pats[v]; });
-    $('groove').value = 'custom'; setActive(keep.length ? keep : g.order.slice(0, Math.min(2, g.order.length))); drawEditor();
+    $('groove').value = 'custom'; setActive(keep.length ? keep : g.order.slice()); drawEditor();
   }
   function drawEditor() {
     var box = $('editor'); box.innerHTML = '';
     g.tracks.forEach(function (tr) {
       var row = document.createElement('div'); row.className = 'erow';
       var nm = document.createElement('span'); nm.className = 'ename'; nm.textContent = tr[1]; nm.style.borderLeft = '4px solid ' + tr[2]; row.appendChild(nm);
-      for (var i = 0; i < 16; i++) (function (i) {
-        var b = document.createElement('button'); b.className = 'cell' + (tr[3].charAt(i) === 'x' ? ' on' : '') + (i % 4 === 0 ? ' beat' : '');
+      var L = tr[3].length, sb = g.sub || 4;
+      for (var i = 0; i < L; i++) (function (i) {
+        var b = document.createElement('button'); b.className = 'cell' + (tr[3].charAt(i) === 'x' ? ' on' : '') + (i % sb === 0 ? ' beat' : '');
         b.style.setProperty('--c', tr[2]); b.setAttribute('aria-label', tr[1] + ' step ' + (i + 1)); b.setAttribute('aria-pressed', tr[3].charAt(i) === 'x');
         b.onclick = function () { edit(function (c) { var p = c.pats[tr[0]]; c.pats[tr[0]] = p.slice(0, i) + (p.charAt(i) === 'x' ? '.' : 'x') + p.slice(i + 1); }); };
         row.appendChild(b);
@@ -944,10 +945,24 @@ details{background:var(--card);border:1px solid var(--line);border-radius:14px;p
     });
     var sel = $('addv'); sel.innerHTML = '';
     KIT.filter(function (v) { return !g.tracks.some(function (t) { return t[0] === v; }); }).forEach(function (v) { var o = document.createElement('option'); o.value = v; o.textContent = VOICES[v][0]; sel.appendChild(o); });
-    $('addbtn').disabled = !sel.options.length; $('bpm').value = Math.round(g.bpm);
+    $('addbtn').disabled = !sel.options.length; $('bpm').value = Math.round(g.bpm); $('sub').value = String(g.sub || 4);
   }
-  $('addbtn').onclick = function () { var v = $('addv').value; if (v) edit(function (c) { c.pats[v] = '................'; }); };
+  $('addbtn').onclick = function () { var v = $('addv').value; if (v) edit(function (c) { c.pats[v] = '.'.repeat((c.sub || 4) * 4); }); };
   $('bpm').onchange = function () { var v = Math.max(40, Math.min(200, Math.round(+$('bpm').value) || 100)); edit(function (c) { c.bpm = v; }); };
+  // subdivision: how many cells per beat. Hits that fall exactly on the new grid are kept; the others cannot exist on it.
+  $('sub').onchange = function () {
+    var ns = +$('sub').value, dropped = 0;
+    edit(function (c) {
+      var os = c.sub || 4; if (ns === os) return;
+      Object.keys(c.pats).forEach(function (v) {
+        var np = '.'.repeat(4 * ns).split(''), p = c.pats[v];
+        for (var i = 0; i < p.length; i++) if (p.charAt(i) === 'x') { if ((i * ns) % os === 0) np[i * ns / os] = 'x'; else dropped++; }
+        c.pats[v] = np.join('');
+      });
+      c.sub = ns;
+    });
+    $('emsg').textContent = dropped ? dropped + ' note' + (dropped > 1 ? 's' : '') + ' did not fit the new grid and ' + (dropped > 1 ? 'were' : 'was') + ' removed.' : '';
+  };
   $('reset').onclick = function () { if (!run) pickGroove(lastPreset); };
   GROOVES.forEach(function (x, i) { var o = document.createElement('option'); o.value = i; o.textContent = x.name; $('groove').appendChild(o); });
   var oc = document.createElement('option'); oc.value = 'custom'; oc.textContent = 'My groove (compose)'; $('groove').appendChild(oc);
