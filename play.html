@@ -1292,6 +1292,24 @@ window.__startPlay = function () {
     }
   }
 
+  // Sounds are scheduled 1.5 s ahead, a little at a time, instead of creating thousands of audio nodes
+  // in one go at the start (that froze weak devices and made the first beats late).
+  function pumpAudio() {
+    var r = run;
+    if (!r || !ctx) return;
+    var tl = r.tl, s = r.sched, limit = ctx.currentTime + 1.5, floor = ctx.currentTime - 0.05, b, n;
+    while (s.bi < tl.beats.length && (b = tl.beats[s.bi]).time <= limit) {
+      s.bi++;
+      if (b.time >= floor && (b.countIn || gs.metro || r.mode === 'demo')) click(b.time, b.isBar, r.gain);
+    }
+    if (r.mode === 'demo') {
+      while (s.ni < tl.notes.length && (n = tl.notes[s.ni]).time <= limit) {
+        s.ni++;
+        if (n.time >= floor) playAt(n.time, gs.voice, n.type === 'ghost' ? 0.12 : 1, r.gain);
+      }
+    }
+  }
+
   function startRun(mode) {
     if (run) return;
     if (!gSeq) { gameError('Load a sequence first.'); return; }
@@ -1304,13 +1322,13 @@ window.__startPlay = function () {
       var tl = G.buildTimeline({ items: gSeq.items, loops: spd && mode === 'demo' ? 1 : gs.loops, tempo: spd ? spd.tempos[0] : gs.tempo, tempos: spd && mode === 'play' ? spd.tempos : null, beatsPerBar: gs.beats, ghostRests: gs.ghost, startTime: ctx.currentTime + 0.6 });
       var gain = ctx.createGain();
       gain.connect(ctx.destination);
-      tl.beats.forEach(function (b) { if (b.countIn || gs.metro || mode === 'demo') click(b.time, b.isBar, gain); });
-      if (mode === 'demo') tl.notes.forEach(function (n) { playAt(n.time, gs.voice, n.type === 'ghost' ? 0.12 : 1, gain); });
       var windows = G.windowsFor(gs.difficulty);
       run = {
-        mode: mode, tl: tl, gain: gain, windows: windows, last: null, raf: 0, heard: 0, hb: 0, hn: 0,
+        mode: mode, tl: tl, gain: gain, sched: { bi: 0, ni: 0 }, windows: windows, last: null, raf: 0, heard: 0, hb: 0, hn: 0,
         judge: mode === 'play' ? G.createJudge({ notes: tl.notes, windows: windows, offsetSec: settings.offsetMs / 1000 }) : null
       };
+      run.timer = setInterval(pumpAudio, 50);
+      pumpAudio();
       $('g-result').hidden = true;
       updateHud();
       updateButtons();
@@ -1325,6 +1343,7 @@ window.__startPlay = function () {
   function stopRun() {
     if (!run) return;
     cancelAnimationFrame(run.raf);
+    clearInterval(run.timer);
     try { run.gain.disconnect(); } catch (e) { /* ignore */ }
     run = null;
     safeVibrate(0);
@@ -1399,6 +1418,7 @@ window.__startPlay = function () {
     var r = run;
     if (!r) return;
     cancelAnimationFrame(r.raf);
+    clearInterval(r.timer);
     try { r.gain.disconnect(); } catch (e) { /* ignore */ }
     run = null;
     updateButtons();
@@ -1473,7 +1493,7 @@ window.__startPlay = function () {
   /* ---- drawing the note highway (vertical: notes fall onto the line) */
   function sizeCanvas() {
     var cv = $('g-canvas');
-    var dpr = window.devicePixelRatio || 1;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2); // 3x screens would draw 2.25x more pixels for no visible gain
     var w = cv.clientWidth;
     var h = cv.clientHeight;
     var pw = Math.max(1, Math.round(w * dpr));
@@ -1533,7 +1553,9 @@ window.__startPlay = function () {
     var items = gSeq.items;
     // beat lines + bar numbers + pattern letters
     g.font = 'bold 12px system-ui, sans-serif';
-    tl.beats.forEach(function (b) {
+    var lb = function (arr, time) { var lo = 0, hi = arr.length; while (lo < hi) { var m = (lo + hi) >> 1; if (arr[m].time < time) lo = m + 1; else hi = m; } return lo; };
+    var tMin = t - (H + 40 - hitY) / pps, tMax = t + (hitY + 40) / pps;
+    tl.beats.slice(lb(tl.beats, tMin), lb(tl.beats, tMax)).forEach(function (b) {
       var y = hitY - (b.time - t) * pps;
       if (y < -20 || y > H + 20) return;
       g.strokeStyle = b.isBar ? P.barLine : P.beat;
@@ -1552,7 +1574,7 @@ window.__startPlay = function () {
       }
     });
     // notes
-    tl.notes.forEach(function (n) {
+    tl.notes.slice(lb(tl.notes, tMin), lb(tl.notes, tMax)).forEach(function (n) {
       var y = hitY - (n.time - t) * pps;
       var judged = run.judge && n.state;
       if (y < -30 || y > H + 30) return;
@@ -2626,12 +2648,16 @@ window.__startPlay = function () {
     }
 
     // timeSec: when the hit was heard on the audio clock. isGhost: the hit came from a ghost binding.
+    var first = 0; // notes are sorted by time: everything before `first` is already judged
+    function skipJudged() { while (first < notes.length && notes[first].state) first++; }
     function hit(timeSec, isGhost) {
       var adj = timeSec - offset;
       var best = null;
       var bestAbs = Infinity;
-      for (var i = 0; i < notes.length; i++) {
+      skipJudged();
+      for (var i = first; i < notes.length; i++) {
         var n = notes[i];
+        if (n.time - adj > w.good) break; // too far in the future, and so are all the next ones
         if (n.state) continue;
         if ((n.type === 'ghost') !== !!isGhost) continue;
         var d = Math.abs(n.time - adj);
@@ -2655,9 +2681,11 @@ window.__startPlay = function () {
     function sweep(nowSec) {
       var adj = nowSec - offset;
       var out = [];
-      for (var i = 0; i < notes.length; i++) {
+      skipJudged();
+      for (var i = first; i < notes.length; i++) {
         var n = notes[i];
-        if (!n.state && n.time + w.good < adj) {
+        if (n.time + w.good >= adj) break; // still has a chance, and so do all the next ones
+        if (!n.state) {
           setJudged(n, 'miss', null, nowSec);
           out.push(n);
         }
