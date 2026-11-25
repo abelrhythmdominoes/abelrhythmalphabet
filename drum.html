@@ -1,0 +1,882 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ABEL Drum (beta)</title><meta name="theme-color" content="#000000"><meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" type="image/png" sizes="32x32" href="icons/play-favicon-32.png"><link rel="apple-touch-icon" href="icons/play-apple-touch-icon.png">
+<style>*{box-sizing:border-box}body{margin:0;background:#0b0b0e;color:#e8e8ee;font:15px/1.4 system-ui,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+main{max-width:980px;margin:0 auto;padding:12px}header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}a{color:#e8b84a}h1{margin:6px 0;font-size:22px}small{opacity:.6}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0}label{display:flex;gap:6px;align-items:center}.k{opacity:.7}
+select,button{font:inherit;color:inherit;background:#17171d;border:1px solid #33333d;border-radius:10px;padding:8px 12px}button{cursor:pointer;touch-action:manipulation}button:disabled{opacity:.4}
+#play{background:#e8b84a;color:#111;border-color:#e8b84a;font-weight:700}.chip{border-radius:999px;padding:6px 12px}.chip.on{background:#2a2a35;font-weight:700}
+canvas{width:100%;display:block;background:#0e0e13;border:1px solid #23232c;border-radius:14px}
+#pads{display:flex;gap:10px;margin:12px 0}.pad{flex:1;min-height:84px;border-width:2px;border-radius:14px;font-weight:700;font-size:16px;display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;user-select:none}.pad:active{background:#2a2a35}
+#hud,#result{min-height:1.4em}</style></head><body><main>
+<header><h1>ABEL Drum <small>beta</small></h1><a href="play.html">← ABEL Play</a></header>
+<div class="row"><label>Groove <select id="groove"></select></label><label>Speed <select id="speed" onchange=""><option value="100">100 %</option><option value="80">80 %</option><option value="60">60 %</option><option value="40">40 %</option></select></label>
+<label>View <select id="view"><option value="lanes">Lanes</option><option value="highway">Highway</option></select></label>
+<label>Sound <select id="mix"><option value="drums">Backing + click</option><option value="click">Click only</option></select></label>
+<label><input type="checkbox" id="cin" checked> Count-in</label></div>
+<div class="row" id="tracks"></div>
+<div class="row"><button id="play">Play</button><button id="listen">Listen</button><button id="stop" disabled>Stop</button><span id="hud"></span></div>
+<canvas id="cv"></canvas><div id="pads"></div><div id="result" aria-live="polite"></div>
+<p><small>Tracks you don’t play sound as the backing. Your keys, pads and MIDI drums are the ones set up in ABEL Play (D snare, F kick, J hi-hat, H tom).</small></p>
+</main><script>/* ABEL generated sounds (inlined) */
+/* ABEL generated sounds (shared by the ABEL app and ABEL Play).
+   Same synthesis as in index.html: every instrument is rendered once into a buffer so each hit is identical. */
+(function (global) {
+  'use strict';
+  const INSTRUMENTS = {
+    snare: { name: '🥁 Snare Drum', description: 'Warm snare sound (default)' },
+    kick: { name: '🔊 Kick Drum', description: 'Deep bass drum' },
+    hihat: { name: '🎵 Hi-Hat', description: 'Crisp hi-hat sound' },
+    clap: { name: '👏 Clap', description: 'Hand clap percussion' },
+    cowbell: { name: '🔔 Cowbell', description: 'Classic cowbell' },
+    tom: { name: '🪘 Tom', description: 'Mid-range tom drum' },
+    rim: { name: '✨ Rim Shot', description: 'Sharp rim click' },
+    bass: { name: '🎸 Bass', description: 'Deep bass guitar note' }
+  };
+
+  const makeNoise = (ctx, dur) => {
+    const buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    return src;
+  };
+  
+  const playSnare = (ctx, time, vol, dest) => {
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    osc1.frequency.value = 180;
+    osc2.frequency.value = 330;
+    osc1.type = 'triangle';
+    osc2.type = 'triangle';
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0, time);
+    og.gain.linearRampToValueAtTime(0.25 * vol, time + 0.001);
+    og.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+    osc1.connect(og);
+    osc2.connect(og);
+    og.connect(dest);
+  
+    const noise = makeNoise(ctx, 0.15);
+    const f = ctx.createBiquadFilter();
+    f.type = 'highpass';
+    f.frequency.value = 2000;
+    f.Q.value = 1;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0, time);
+    ng.gain.linearRampToValueAtTime(0.35 * vol, time + 0.001);
+    ng.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
+    noise.connect(f);
+    f.connect(ng);
+    ng.connect(dest);
+  
+    osc1.start(time);
+    osc1.stop(time + 0.08);
+    osc2.start(time);
+    osc2.stop(time + 0.08);
+    noise.start(time);
+    noise.stop(time + 0.15);
+  };
+  
+  const playKick = (ctx, time, vol, dest) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.frequency.setValueAtTime(150, time);
+    osc.frequency.exponentialRampToValueAtTime(40, time + 0.1);
+    gain.gain.setValueAtTime(0.8 * vol, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
+    osc.connect(gain);
+    gain.connect(dest);
+    osc.start(time);
+    osc.stop(time + 0.3);
+  };
+  
+  const playHiHat = (ctx, time, vol, dest) => {
+    const noise = makeNoise(ctx, 0.1);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 7000;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.3 * vol, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(dest);
+    noise.start(time);
+    noise.stop(time + 0.1);
+  };
+  
+  const playClap = (ctx, time, vol, dest) => {
+    for (let i = 0; i < 3; i++) {
+      const noise = makeNoise(ctx, 0.08);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 1500;
+      filter.Q.value = 2;
+      const gain = ctx.createGain();
+      const t = time + i * 0.01;
+      gain.gain.setValueAtTime(0.25 * vol, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(dest);
+      noise.start(t);
+      noise.stop(t + 0.08);
+    }
+  };
+  
+  const playCowbell = (ctx, time, vol, dest) => {
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    osc1.frequency.value = 540;
+    osc2.frequency.value = 800;
+    osc1.type = 'square';
+    osc2.type = 'square';
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.3 * vol, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(dest);
+    osc1.start(time);
+    osc1.stop(time + 0.15);
+    osc2.start(time);
+    osc2.stop(time + 0.15);
+  };
+  
+  const playTom = (ctx, time, vol, dest) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.frequency.setValueAtTime(220, time);
+    osc.frequency.exponentialRampToValueAtTime(110, time + 0.15);
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.5 * vol, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
+    osc.connect(gain);
+    gain.connect(dest);
+    osc.start(time);
+    osc.stop(time + 0.2);
+  };
+  
+  const playRimShot = (ctx, time, vol, dest) => {
+    const osc = ctx.createOscillator();
+    osc.frequency.value = 400;
+    osc.type = 'square';
+    const noise = makeNoise(ctx, 0.02);
+    const oscGain = ctx.createGain();
+    const noiseGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(0.2 * vol, time);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, time + 0.02);
+    noiseGain.gain.setValueAtTime(0.4 * vol, time);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, time + 0.015);
+    osc.connect(oscGain);
+    oscGain.connect(dest);
+    noise.connect(noiseGain);
+    noiseGain.connect(dest);
+    osc.start(time);
+    osc.stop(time + 0.02);
+    noise.start(time);
+    noise.stop(time + 0.02);
+  };
+  
+  const playBass = (ctx, time, vol, dest) => {
+    const fundamental = ctx.createOscillator();
+    const harmonic1 = ctx.createOscillator();
+    const harmonic2 = ctx.createOscillator();
+    fundamental.frequency.value = 41.2;
+    harmonic1.frequency.value = 82.4;
+    harmonic2.frequency.value = 123.6;
+    fundamental.type = 'sine';
+    harmonic1.type = 'sine';
+    harmonic2.type = 'sine';
+  
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 600;
+    filter.Q.value = 1;
+  
+    const fg = ctx.createGain();
+    const h1g = ctx.createGain();
+    const h2g = ctx.createGain();
+    const master = ctx.createGain();
+  
+    fg.gain.setValueAtTime(0, time);
+    fg.gain.linearRampToValueAtTime(0.5 * vol, time + 0.01);
+    fg.gain.linearRampToValueAtTime(0.35 * vol, time + 0.05);
+    fg.gain.setValueAtTime(0.35 * vol, time + 0.2);
+    fg.gain.exponentialRampToValueAtTime(0.001, time + 0.4);
+  
+    h1g.gain.setValueAtTime(0, time);
+    h1g.gain.linearRampToValueAtTime(0.2 * vol, time + 0.01);
+    h1g.gain.exponentialRampToValueAtTime(0.001, time + 0.35);
+  
+    h2g.gain.setValueAtTime(0, time);
+    h2g.gain.linearRampToValueAtTime(0.1 * vol, time + 0.01);
+    h2g.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
+  
+    master.gain.value = 0.6;
+  
+    fundamental.connect(fg);
+    harmonic1.connect(h1g);
+    harmonic2.connect(h2g);
+    fg.connect(filter);
+    h1g.connect(filter);
+    h2g.connect(filter);
+    filter.connect(master);
+    master.connect(dest);
+  
+    fundamental.start(time);
+    fundamental.stop(time + 0.4);
+    harmonic1.start(time);
+    harmonic1.stop(time + 0.35);
+    harmonic2.start(time);
+    harmonic2.stop(time + 0.3);
+  };
+  
+  const INSTRUMENT_FN = {
+    snare: playSnare,
+    kick: playKick,
+    hihat: playHiHat,
+    clap: playClap,
+    cowbell: playCowbell,
+    tom: playTom,
+    rim: playRimShot,
+    bass: playBass
+  };
+  
+  // Every instrument is rendered ONCE (same synth, rendered offline into a buffer) so that each
+  // hit is identical: same pitch sweep, same level, same noise, and much lighter on the CPU.
+  const renderSamples = async (ctx) => {
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!OAC) return null;
+    const out = {};
+    try {
+      for (const key of Object.keys(INSTRUMENT_FN)) {
+        const off = new OAC(1, Math.ceil(ctx.sampleRate * 0.5), ctx.sampleRate);
+        INSTRUMENT_FN[key](off, 0, 1, off.destination);
+        out[key] = await off.startRendering();
+      }
+    } catch (e) {
+      return null; // fall back to live synthesis
+    }
+    return out;
+  };
+  
+  
+  global.AbelSounds = { INSTRUMENTS: INSTRUMENTS, INSTRUMENT_FN: INSTRUMENT_FN, renderSamples: renderSamples, makeNoise: makeNoise };
+})(typeof window !== 'undefined' ? window : globalThis);</script><script>/* ABEL Input - MIDI + computer keyboard, bindings (incl. ghost notes), clock conversion, latency calibration.
+   Plain script (no build step). Exposes window.AbelInput. The pure functions are unit-tested. */
+(function (global) {
+  'use strict';
+
+  var STORE_KEY = 'abel:input:v1';
+  var DEFAULT_GHOST_VELOCITY = 0.25;
+  var KINDS = ['key', 'note', 'device'];
+
+  function clamp(v, lo, hi) {
+    v = Number(v);
+    if (!isFinite(v)) return lo;
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  /* ------------------------------------------------------------------ bindings */
+
+  function newId() {
+    return 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+
+  // kind 'key'    : a computer key (code = KeyboardEvent.code, e.g. "KeyD": the physical key, any layout)
+  // kind 'note'   : a MIDI note number (optionally only from one device)
+  // kind 'device' : EVERY note of one MIDI device goes to one voice
+  function makeBinding(partial) {
+    var b = {
+      id: newId(),
+      kind: 'key',
+      voice: 'snare',
+      ghost: false, // ghost note: velocity sensitivity is OFF, the hit always uses fixedVelocity
+      fixedVelocity: DEFAULT_GHOST_VELOCITY,
+      silent: false // ghost hit counts but makes no sound
+    };
+    for (var k in partial) if (Object.prototype.hasOwnProperty.call(partial, k)) b[k] = partial[k];
+    return b;
+  }
+
+  function sanitizeBinding(raw) {
+    if (!raw || typeof raw !== 'object' || KINDS.indexOf(raw.kind) < 0) return null;
+    var b = makeBinding({
+      id: typeof raw.id === 'string' ? raw.id : newId(),
+      kind: raw.kind,
+      voice: typeof raw.voice === 'string' ? raw.voice : 'snare',
+      ghost: !!raw.ghost,
+      fixedVelocity: clamp(raw.fixedVelocity == null ? DEFAULT_GHOST_VELOCITY : raw.fixedVelocity, 0.02, 1),
+      silent: !!raw.silent
+    });
+    if (raw.kind === 'key') {
+      if (typeof raw.code !== 'string' || !raw.code) return null;
+      b.code = raw.code;
+      if (typeof raw.codeLabel === 'string') b.codeLabel = raw.codeLabel;
+    } else if (raw.kind === 'note') {
+      var n = Number(raw.note);
+      if (!(n >= 0 && n <= 127)) return null;
+      b.note = Math.round(n);
+      if (raw.deviceId) b.deviceId = String(raw.deviceId);
+      if (raw.deviceName) b.deviceName = String(raw.deviceName);
+    } else {
+      if (!raw.deviceId && !raw.deviceName) return null;
+      if (raw.deviceId) b.deviceId = String(raw.deviceId);
+      if (raw.deviceName) b.deviceName = String(raw.deviceName);
+    }
+    return b;
+  }
+
+  // The same physical device can get another id on another USB port: the name is the backup identity.
+  function sameDevice(b, ev) {
+    if (b.deviceId && ev.deviceId && b.deviceId === ev.deviceId) return true;
+    return !!(b.deviceName && ev.deviceName && b.deviceName === ev.deviceName);
+  }
+
+  // How specific is this binding for this event? 0 = no match. The most specific binding wins:
+  // key (3) / note on one device (3) > note on any device (2) > whole device (1)
+  function matchScore(b, ev) {
+    if (ev.source === 'key') return b.kind === 'key' && b.code === ev.code ? 3 : 0;
+    if (ev.source === 'midi') {
+      if (b.kind === 'note' && b.note === ev.note) {
+        if (b.deviceId || b.deviceName) return sameDevice(b, ev) ? 3 : 0;
+        return 2;
+      }
+      if (b.kind === 'device' && sameDevice(b, ev)) return 1;
+    }
+    return 0;
+  }
+
+  function resolveBinding(bindings, ev) {
+    var best = null;
+    var bestScore = 0;
+    for (var i = 0; i < bindings.length; i++) {
+      var s = matchScore(bindings[i], ev);
+      if (s > bestScore) {
+        best = bindings[i];
+        bestScore = s;
+      }
+    }
+    return best;
+  }
+
+  // 0..1. A ghost binding ignores how hard you hit; keys have no velocity, so they play at full level.
+  function effectiveVelocity(b, ev) {
+    if (b.ghost) return clamp(b.fixedVelocity, 0.02, 1);
+    if (ev.velocity == null) return 1;
+    return clamp(ev.velocity / 127, 0, 1);
+  }
+
+  function velocityToGain(v) {
+    return Math.max(0.04, Math.pow(clamp(v, 0, 1), 1.4));
+  }
+
+  /* ------------------------------------------------------------------ presets */
+
+  function keyboardStarter() {
+    return [
+      makeBinding({ kind: 'key', code: 'KeyD', codeLabel: 'D', voice: 'snare' }),
+      makeBinding({ kind: 'key', code: 'KeyF', codeLabel: 'F', voice: 'kick' }),
+      makeBinding({ kind: 'key', code: 'KeyJ', codeLabel: 'J', voice: 'hihat' }),
+      makeBinding({ kind: 'key', code: 'KeyK', codeLabel: 'K', voice: 'clap' }),
+      makeBinding({ kind: 'key', code: 'KeyS', codeLabel: 'S', voice: 'snare', ghost: true })
+    ];
+  }
+
+  // General MIDI drum map (what most e-drum kits and pad controllers send)
+  function gmDrumPreset() {
+    var map = [
+      [36, 'kick'], [35, 'kick'], [38, 'snare'], [40, 'snare'], [37, 'rim'], [39, 'clap'],
+      [42, 'hihat'], [44, 'hihat'], [46, 'hihat'], [41, 'tom'], [43, 'tom'], [45, 'tom'], [47, 'tom'], [48, 'tom'], [50, 'tom'],
+      [56, 'cowbell']
+    ];
+    return map.map(function (m) {
+      return makeBinding({ kind: 'note', note: m[0], voice: m[1] });
+    });
+  }
+
+  function sameTarget(a, b) {
+    if (a.kind !== b.kind) return false;
+    if (a.kind === 'key') return a.code === b.code;
+    if (a.kind === 'note') return a.note === b.note && (a.deviceId || '') === (b.deviceId || '');
+    return (a.deviceId || a.deviceName) === (b.deviceId || b.deviceName);
+  }
+
+  // adds the presets' bindings that are not there yet (never overwrites what the person set up)
+  function mergeBindings(existing, extra) {
+    var out = existing.slice();
+    extra.forEach(function (e) {
+      if (!out.some(function (o) { return sameTarget(o, e); })) out.push(e);
+    });
+    return out;
+  }
+
+  function describeBinding(b, voiceNames) {
+    var voice = (voiceNames && voiceNames[b.voice]) || b.voice;
+    var from;
+    if (b.kind === 'key') from = 'Key ' + (b.codeLabel || b.code);
+    else if (b.kind === 'note') from = 'MIDI note ' + b.note + (b.deviceName ? ' on ' + b.deviceName : ' (any device)');
+    else from = 'Whole device: ' + (b.deviceName || b.deviceId);
+    var how = b.ghost
+      ? 'ghost note' + (b.silent ? ', silent' : ', fixed volume ' + Math.round(b.fixedVelocity * 100) + '%')
+      : b.kind === 'key' ? 'full volume' : 'velocity sensitive';
+    return { from: from, to: voice, how: how };
+  }
+
+  /* ------------------------------------------------------------------ storage */
+
+  // localStorage can be blocked (sandboxed preview frames, strict privacy settings): then settings live in memory only
+  var memoryStore = { d: {}, getItem: function (k) { return Object.prototype.hasOwnProperty.call(this.d, k) ? this.d[k] : null; }, setItem: function (k, v) { this.d[k] = String(v); } };
+  function getStore(storage) {
+    if (storage) return storage;
+    try {
+      var ls = global.localStorage;
+      ls.getItem('abel:probe');
+      return ls;
+    } catch (e) {
+      return memoryStore;
+    }
+  }
+
+  function loadSettings(storage) {
+    var st = getStore(storage);
+    var out = { bindings: null, offsetMs: 0 };
+    try {
+      var raw = JSON.parse(st.getItem(STORE_KEY) || 'null');
+      if (raw && typeof raw === 'object') {
+        if (Array.isArray(raw.bindings)) {
+          out.bindings = raw.bindings.map(sanitizeBinding).filter(Boolean);
+        }
+        out.offsetMs = clamp(raw.offsetMs || 0, -300, 300);
+      }
+    } catch (e) {
+      /* unreadable: start fresh */
+    }
+    return out;
+  }
+
+  function saveSettings(settings, storage) {
+    var st = getStore(storage);
+    var json = JSON.stringify({ bindings: settings.bindings, offsetMs: settings.offsetMs });
+    try {
+      st.setItem(STORE_KEY, json);
+      return true;
+    } catch (e) {
+      try { memoryStore.setItem(STORE_KEY, json); } catch (e2) { /* ignore */ }
+      return false;
+    }
+  }
+
+  /* ------------------------------------------------------------------ MIDI parsing */
+
+  // data = the raw MIDI bytes
+  function parseMidi(data) {
+    if (!data || data.length < 1) return { type: 'empty' };
+    var status = data[0];
+    if (status >= 0xf8) return { type: 'realtime' }; // clock, active sensing...: constant noise, never shown
+    if (status >= 0xf0) return { type: 'system' };
+    var kind = status & 0xf0;
+    var channel = (status & 0x0f) + 1;
+    var d1 = data[1] | 0;
+    var d2 = data[2] | 0;
+    if (kind === 0x90) return d2 > 0 ? { type: 'noteon', channel: channel, note: d1, velocity: d2 } : { type: 'noteoff', channel: channel, note: d1 };
+    if (kind === 0x80) return { type: 'noteoff', channel: channel, note: d1 };
+    if (kind === 0xb0) return { type: 'cc', channel: channel, cc: d1, value: d2 };
+    if (kind === 0xa0) return { type: 'aftertouch', channel: channel, note: d1, value: d2 };
+    if (kind === 0xd0) return { type: 'aftertouch', channel: channel, value: d1 };
+    if (kind === 0xe0) return { type: 'pitchbend', channel: channel, value: ((d2 << 7) | d1) - 8192 };
+    if (kind === 0xc0) return { type: 'program', channel: channel, value: d1 };
+    return { type: 'other' };
+  }
+
+  /* ------------------------------------------------------------------ MIDI manager (hot-plug) */
+
+  // opts: onHit(ev), onOther(info), onDevices(list), onLog(text), navigator (for tests)
+  function createMidiManager(opts) {
+    var nav = opts.navigator || global.navigator;
+    var access = null;
+    var status = 'idle'; // idle | unsupported | blocked | denied | error | ready
+    var devices = [];
+
+    function log(t) {
+      if (opts.onLog) opts.onLog(t);
+    }
+
+    function describePort(port) {
+      return {
+        id: port.id,
+        name: port.name || 'MIDI device',
+        manufacturer: port.manufacturer || '',
+        state: port.state,
+        connection: port.connection
+      };
+    }
+
+    function onMessage(e) {
+      var port = e.target || {};
+      var info = parseMidi(e.data);
+      var deviceId = port.id || '';
+      var deviceName = port.name || 'MIDI device';
+      if (info.type === 'noteon') {
+        if (opts.onHit) {
+          opts.onHit({
+            source: 'midi',
+            deviceId: deviceId,
+            deviceName: deviceName,
+            note: info.note,
+            velocity: info.velocity,
+            channel: info.channel,
+            timeStamp: typeof e.timeStamp === 'number' ? e.timeStamp : performance.now()
+          });
+        }
+      } else if (info.type !== 'realtime' && info.type !== 'empty') {
+        if (opts.onOther) opts.onOther({ info: info, deviceId: deviceId, deviceName: deviceName });
+      }
+    }
+
+    function refresh() {
+      var list = [];
+      if (access) {
+        // (re)attach the listener to every input: this is what makes plugging in a device later just work
+        access.inputs.forEach(function (input) {
+          input.onmidimessage = onMessage;
+          list.push(describePort(input));
+        });
+      }
+      devices = list;
+      if (opts.onDevices) opts.onDevices(list);
+    }
+
+    function enable() {
+      if (!nav || typeof nav.requestMIDIAccess !== 'function') {
+        status = 'unsupported';
+        log('Web MIDI is not available in this browser.');
+        return Promise.resolve(status);
+      }
+      return nav.requestMIDIAccess({ sysex: false }).then(
+        function (a) {
+          access = a;
+          status = 'ready';
+          access.onstatechange = function (e) {
+            var p = e && e.port;
+            if (p && p.type === 'input') {
+              log('MIDI ' + (p.state === 'connected' ? 'connected' : 'disconnected') + ': ' + (p.name || 'device'));
+            }
+            refresh();
+          };
+          refresh();
+          log('MIDI ready: ' + devices.length + ' input device(s) found.');
+          return status;
+        },
+        function (err) {
+          var name = err && err.name;
+          status = name === 'SecurityError' ? 'blocked' : name === 'NotAllowedError' ? 'denied' : 'error';
+          log('MIDI could not start (' + (name || 'error') + ').');
+          return status;
+        }
+      );
+    }
+
+    return {
+      enable: enable,
+      getStatus: function () { return status; },
+      getDevices: function () { return devices.slice(); }
+    };
+  }
+
+  /* ------------------------------------------------------------------ clock conversion & calibration */
+
+  // Converts a browser event time (performance.now() domain: event.timeStamp) to the time on the audio clock
+  // at which that moment is HEARD. Same approach as the ABEL app's animation clock.
+  function perfToAudioTime(ctx, perfMs) {
+    try {
+      if (typeof ctx.getOutputTimestamp === 'function') {
+        var ts = ctx.getOutputTimestamp();
+        if (ts && ts.contextTime > 0 && ts.performanceTime > 0) {
+          var heardNow = ts.contextTime + (performance.now() - ts.performanceTime) / 1000;
+          if (heardNow <= ctx.currentTime + 0.02 && heardNow >= ctx.currentTime - 0.6) {
+            return ts.contextTime + (perfMs - ts.performanceTime) / 1000;
+          }
+        }
+      }
+    } catch (e) {
+      /* fall back below */
+    }
+    return ctx.currentTime - (performance.now() - perfMs) / 1000 - Math.min(ctx.outputLatency || 0, 0.5);
+  }
+
+  function median(arr) {
+    if (!arr.length) return 0;
+    var a = arr.slice().sort(function (x, y) { return x - y; });
+    var m = Math.floor(a.length / 2);
+    return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+  }
+
+  // clickTimes / hitTimes in seconds on the same clock. Each hit is matched to its nearest click
+  // (within maxSec); a click is used at most once. Result in milliseconds: positive = you hit LATE.
+  function computeOffsets(clickTimes, hitTimes, maxSec) {
+    var limit = maxSec == null ? 0.25 : maxSec;
+    var used = {};
+    var offsets = [];
+    hitTimes.forEach(function (h) {
+      var bestI = -1;
+      var bestD = Infinity;
+      for (var i = 0; i < clickTimes.length; i++) {
+        var d = Math.abs(h - clickTimes[i]);
+        if (d < bestD) {
+          bestD = d;
+          bestI = i;
+        }
+      }
+      if (bestI >= 0 && bestD <= limit && !used[bestI]) {
+        used[bestI] = true;
+        offsets.push((h - clickTimes[bestI]) * 1000);
+      }
+    });
+    var med = median(offsets);
+    var dev = median(offsets.map(function (o) { return Math.abs(o - med); }));
+    return { offsetsMs: offsets, medianMs: med, spreadMs: dev, count: offsets.length };
+  }
+
+  global.AbelInput = {
+    STORE_KEY: STORE_KEY,
+    DEFAULT_GHOST_VELOCITY: DEFAULT_GHOST_VELOCITY,
+    makeBinding: makeBinding,
+    sanitizeBinding: sanitizeBinding,
+    matchScore: matchScore,
+    resolveBinding: resolveBinding,
+    effectiveVelocity: effectiveVelocity,
+    velocityToGain: velocityToGain,
+    keyboardStarter: keyboardStarter,
+    gmDrumPreset: gmDrumPreset,
+    mergeBindings: mergeBindings,
+    describeBinding: describeBinding,
+    loadSettings: loadSettings,
+    saveSettings: saveSettings,
+    parseMidi: parseMidi,
+    createMidiManager: createMidiManager,
+    perfToAudioTime: perfToAudioTime,
+    computeOffsets: computeOffsets,
+    median: median
+  };
+})(typeof window !== 'undefined' ? window : globalThis);</script><script>(function () {
+  'use strict';
+  var S = AbelSounds, A = AbelInput, $ = function (i) { return document.getElementById(i); };
+  var HAT = '#e8b84a', SN = '#4f8df7', KI = '#ec407a', TM = '#34c79a';
+  var GROOVES = [
+    { name: 'Rock beat (8th-note hi-hat)', bpm: 100, order: ['hihat', 'kick', 'snare'], tracks: [['hihat', 'Hi-hat', HAT, 'x.x.x.x.x.x.x.x.'], ['snare', 'Snare', SN, '....x.......x...'], ['kick', 'Kick', KI, 'x.......x.x.....']] },
+    { name: 'Four on the floor', bpm: 120, order: ['hihat', 'kick', 'snare'], tracks: [['hihat', 'Hi-hat', HAT, '..x...x...x...x.'], ['snare', 'Snare', SN, '....x.......x...'], ['kick', 'Kick', KI, 'x...x...x...x...']] },
+    { name: 'Disco (hi-hat on the “&”)', bpm: 115, order: ['hihat', 'kick', 'snare'], tracks: [['hihat', 'Hi-hat', HAT, '..x...x...x...x.'], ['snare', 'Snare', SN, '....x.......x...'], ['kick', 'Kick', KI, 'x...x...x...x...']] },
+    { name: '16th-note funk', bpm: 90, order: ['hihat', 'kick', 'snare', 'tom'], tracks: [['hihat', 'Hi-hat', HAT, 'xxxxxxxxxxxxxxxx'], ['snare', 'Snare', SN, '....x.......x..x'], ['tom', 'Tom', TM, '..............x.'], ['kick', 'Kick', KI, 'x.....x...x.....']] }
+  ];
+  var RC = ['', '#4ade80', '#60a5fa', '#fbbf24'], W1 = 0.05, W2 = 0.09, W3 = 0.14;
+  var ctx = null, samples = null, run = null, preview = null, raf = 0, timer = 0, midi = null;
+  var settings = A.loadSettings(), g = GROOVES[0], speed = 100, view = 'lanes', active = {};
+  var bindings = A.mergeBindings(A.mergeBindings(settings.bindings && settings.bindings.length ? settings.bindings : A.keyboardStarter(),
+    [A.makeBinding({ kind: 'key', code: 'KeyH', codeLabel: 'H', voice: 'tom' })]), A.gmDrumPreset());
+
+  /* ---------- audio */
+  function ensureAudio() {
+    if (!ctx) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* ignore */ }
+      S.renderSamples(ctx).then(function (s) { samples = s; });
+    }
+    return ctx.state === 'running' ? Promise.resolve() : ctx.resume();
+  }
+  function click(t, strong, dest) {
+    var o = ctx.createOscillator(), gn = ctx.createGain();
+    o.frequency.value = strong ? 1600 : 1100;
+    gn.gain.setValueAtTime(0.0001, t); gn.gain.exponentialRampToValueAtTime(strong ? 0.5 : 0.3, t + 0.002); gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+    o.connect(gn); gn.connect(dest); o.start(t); o.stop(t + 0.06);
+  }
+  function playAt(t, voice, level, dest) {
+    var gn = ctx.createGain(); gn.gain.value = level; gn.connect(dest);
+    if (samples && samples[voice]) { var s = ctx.createBufferSource(); s.buffer = samples[voice]; s.connect(gn); s.start(t); }
+    else if (S.INSTRUMENT_FN[voice]) S.INSTRUMENT_FN[voice](ctx, t, 1, gn);
+  }
+  // sounds are scheduled 1.5 s ahead, a little at a time (never the whole run at once: weak devices)
+  function pump() {
+    var r = run; if (!r) return;
+    var lim = ctx.currentTime + 1.5, fl = ctx.currentTime - 0.05, t;
+    while (r.bi < r.nb && (t = r.t0 + r.bi * r.beat) <= lim) { r.bi++; if (t >= fl) click(t, (r.bi - 1 - r.cin) % 4 === 0, r.gain); }
+    while (r.ni < r.notes.length && r.notes[r.ni].t <= lim) {
+      var n = r.notes[r.ni++];
+      if (n.t >= fl && (r.mode === 'listen' || (r.backing && !active[n.v]))) playAt(n.t, n.v, 0.9, r.gain);
+    }
+  }
+
+  /* ---------- timeline: every track's notes merged and sorted */
+  function build(t0) {
+    var bpm = g.bpm * speed / 100, beat = 60 / bpm, step = beat / 4, cin = $('cin').checked ? 4 : 0, N = 64;
+    var r = { beat: beat, step: step, t0: t0, cin: cin, start: t0 + cin * beat, N: N, nb: cin + N / 4, notes: [], byV: {}, first: {} };
+    g.tracks.forEach(function (tr) {
+      for (var i = 0; i < N; i++) if (tr[3].charAt(i % 16) === 'x') {
+        var n = { t: r.start + i * step, v: tr[0], state: 0 }; r.notes.push(n); (r.byV[tr[0]] = r.byV[tr[0]] || []).push(n);
+      }
+    });
+    r.notes.sort(function (a, b) { return a.t - b.t; });
+    r.end = r.start + N * step; return r;
+  }
+
+  /* ---------- input (same key / MIDI bindings as ABEL Play) */
+  function onHit(ev) {
+    if (!ctx) return;
+    var b = ev.source === 'pad' ? { voice: ev.voice, ghost: false } : A.resolveBinding(bindings, ev);
+    if (!b) return;
+    if (!b.silent) playAt(ctx.currentTime + 0.005, b.voice, 0.2 + 0.8 * A.velocityToGain(A.effectiveVelocity(b, ev)), ctx.destination);
+    if (run && run.mode === 'play') judge(b.voice, A.perfToAudioTime(ctx, ev.timeStamp) - settings.offsetMs / 1000);
+  }
+  function judge(v, adj) {
+    var r = run, a = r.byV[v]; if (!a || !active[v]) return;
+    var f = r.first[v] || 0; while (f < a.length && a[f].state) f++; r.first[v] = f;
+    var best = null, bd = 9;
+    for (var i = f; i < a.length; i++) {
+      var n = a[i]; if (n.t - adj > W3) break; if (n.state) continue;
+      var d = Math.abs(n.t - adj); if (d <= W3 && d < bd) { best = n; bd = d; }
+    }
+    if (!best) { r.combo = 0; r.last = { t: 'Extra', c: '#f87171', at: r.heard }; return; }
+    var k = bd <= W1 ? 1 : bd <= W2 ? 2 : 3; best.state = k;
+    r.score += [0, 100, 70, 40][k]; r.combo++; r.max = Math.max(r.max, r.combo); r.hit++; r.sum += (adj - best.t) * 1000;
+    r.last = { t: ['', 'Perfect', 'Great', 'Good'][k], c: RC[k], at: r.heard };
+  }
+  window.addEventListener('keydown', function (e) {
+    if (e.repeat || !ctx || /INPUT|TEXTAREA/.test((e.target || {}).tagName || '')) return;
+    if (e.code === 'Escape' && run) { stop(); return; }
+    var b = A.resolveBinding(bindings, { source: 'key', code: e.code });
+    if (b) { e.preventDefault(); onHit({ source: 'key', code: e.code, timeStamp: e.timeStamp }); }
+  });
+
+  /* ---------- run control */
+  function start(mode) {
+    if (run) return;
+    ensureAudio().then(function () {
+      if (run) return;
+      if (!midi) { midi = A.createMidiManager({ onHit: onHit }); midi.enable(); }
+      try { document.activeElement.blur(); } catch (e) { /* ignore */ }
+      var r = build(ctx.currentTime + 0.4);
+      r.mode = mode; r.gain = ctx.createGain(); r.gain.connect(ctx.destination); r.backing = $('mix').value === 'drums';
+      r.bi = 0; r.ni = 0; r.score = 0; r.combo = 0; r.max = 0; r.hit = 0; r.sum = 0; r.last = null; r.heard = 0;
+      r.total = r.notes.filter(function (n) { return active[n.v]; }).length;
+      run = r; $('result').textContent = ''; timer = setInterval(pump, 50); pump(); btns(); raf = requestAnimationFrame(frame);
+    });
+  }
+  function stop() {
+    if (!run) return;
+    clearInterval(timer); cancelAnimationFrame(raf); try { run.gain.disconnect(); } catch (e) { /* ignore */ }
+    var r = run; run = null; btns(); idle(); return r;
+  }
+  function finish() {
+    var r = stop(); if (!r || r.mode !== 'play') return;
+    $('result').textContent = 'Finished · score ' + r.score + ' · ' + Math.round(100 * r.hit / Math.max(1, r.total)) + '% of the notes hit · best combo ' + r.max +
+      (r.hit ? ' · average timing ' + (r.sum / r.hit >= 0 ? '+' : '') + Math.round(r.sum / r.hit) + ' ms (+ = late)' : '');
+  }
+  function frame() {
+    var r = run; if (!r) return;
+    var heard = A.perfToAudioTime(ctx, performance.now()); r.heard = heard;
+    for (var v in r.byV) {
+      if (!active[v] || r.mode !== 'play') continue;
+      var a = r.byV[v], f = r.first[v] || 0;
+      while (f < a.length && (a[f].state || a[f].t + W3 < heard)) { if (!a[f].state) { a[f].state = -1; r.combo = 0; r.last = { t: 'Miss', c: '#f87171', at: heard }; } f++; }
+      r.first[v] = f;
+    }
+    draw(heard);
+    $('hud').textContent = r.mode === 'play' ? 'Score ' + r.score + ' · Combo ' + r.combo : 'Listening…';
+    if (heard > r.end + 0.6) { finish(); return; }
+    raf = requestAnimationFrame(frame);
+  }
+  function btns() { $('play').disabled = $('listen').disabled = !!run; $('stop').disabled = !run; if (!run) $('hud').textContent = ''; }
+
+  /* ---------- drawing: lanes (horizontal, as in YourTurn) or highway (vertical); only what is on screen */
+  function draw(heard) {
+    var cv = $('cv'), dpr = Math.min(window.devicePixelRatio || 1, 2), w = cv.clientWidth, h = cv.clientHeight;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+    var c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
+    var r = run || preview, n = g.tracks.length, V = view === 'highway', L = V ? 4 : 92, top = V ? 40 : 34;
+    var lane = V ? (w - 8) / n : (h - top - 4) / n, hit = V ? h * 0.82 : L + (w - L) * 0.2;
+    var pps = V ? (hit - top) / (r.beat * 4.5) : (w - L) / (r.beat * 6.5);
+    var along = function (t) { return V ? hit - (t - heard) * pps : hit + (t - heard) * pps; };
+    var P = function (t, i) { var d = along(t); return V ? [L + lane * (i + 0.5), d] : [d, top + lane * (i + 0.5)]; };
+    var vis = function (d) { return V ? d > top - 10 && d < h + 10 : d > L - 10 && d < w + 10; };
+    c.font = 'bold 12px system-ui, sans-serif'; c.textBaseline = 'middle';
+    g.tracks.forEach(function (tr, i) {
+      c.fillStyle = i % 2 ? 'rgba(255,255,255,.03)' : 'rgba(255,255,255,.015)';
+      if (V) c.fillRect(L + lane * i, top, lane, h - top); else c.fillRect(0, top + lane * i, w, lane);
+      c.globalAlpha = active[tr[0]] ? 1 : 0.35; c.fillStyle = tr[2]; c.textAlign = V ? 'center' : 'left';
+      if (V) { c.fillRect(L + lane * i + 8, top - 8, lane - 16, 3); c.fillStyle = '#e8e8ee'; c.fillText(tr[1], L + lane * (i + 0.5), top - 20); }
+      else { c.fillRect(8, top + lane * i + lane * 0.25, 3, lane * 0.5); c.fillStyle = '#e8e8ee'; c.fillText(tr[1], 18, top + lane * (i + 0.5)); }
+      c.globalAlpha = 1;
+    });
+    var b0 = Math.floor((heard - r.t0) / r.beat) - 1;
+    for (var b = b0; b < b0 + 12; b++) {
+      var tb = r.t0 + b * r.beat, d = along(tb); if (!vis(d) || b < 0 || b >= r.nb) continue;
+      var bn = ((b - r.cin) % 4 + 4) % 4 + 1, bar = b >= r.cin && bn === 1;
+      c.strokeStyle = bar ? 'rgba(255,255,255,.35)' : 'rgba(255,255,255,.12)'; c.beginPath();
+      if (V) { c.moveTo(L, d); c.lineTo(w, d); } else { c.moveTo(d, top); c.lineTo(d, h); } c.stroke();
+      c.fillStyle = bar ? '#fff' : '#8a8a96'; c.font = (bar ? 'bold 16px' : '12px') + ' system-ui, sans-serif'; c.textAlign = 'center';
+      var lab = b < r.cin ? String(bn) : bar ? 'bar ' + ((b - r.cin) / 4 + 1) : String(bn);
+      if (V) c.fillText(lab, 18, d - 8); else c.fillText(lab, d, 14);
+    }
+    var s0 = Math.max(0, Math.floor((heard - r.start) / r.step) - 8);
+    c.fillStyle = 'rgba(255,255,255,.22)';
+    for (var s = s0; s < r.N; s++) {
+      var ts = r.start + s * r.step, ds = along(ts); if (V ? ds < top : ds > w + 10) break; if (!vis(ds)) continue;
+      for (var i2 = 0; i2 < n; i2++) { var q = P(ts, i2); c.fillRect(q[0] - 1.5, q[1] - 1.5, 3, 3); }
+    }
+    var span = Math.max(h, w) / pps + 0.4, lo = 0, hi = r.notes.length, tmin = heard - span;
+    while (lo < hi) { var m = (lo + hi) >> 1; if (r.notes[m].t < tmin) lo = m + 1; else hi = m; }
+    var rr = Math.min(lane * 0.36, 15);
+    for (var k = lo; k < r.notes.length && r.notes[k].t < heard + span; k++) {
+      var nt = r.notes[k]; if (!active[nt.v]) continue;
+      var dd = along(nt.t); if (!vis(dd)) continue;
+      var ti = g.tracks.findIndex(function (x) { return x[0] === nt.v; }), p = P(nt.t, ti);
+      c.globalAlpha = nt.state === -1 ? 0.25 : nt.t < heard - 0.05 && !nt.state ? 0.35 : 1;
+      c.fillStyle = nt.state === -1 ? '#7f1d1d' : g.tracks[ti][2]; c.beginPath(); c.arc(p[0], p[1], rr, 0, 6.2832); c.fill();
+      if (nt.state > 0) { c.strokeStyle = RC[nt.state]; c.lineWidth = 3; c.stroke(); c.lineWidth = 1; }
+      c.globalAlpha = 1;
+    }
+    c.strokeStyle = '#fff'; c.lineWidth = 2; c.beginPath();
+    if (V) { c.moveTo(L, hit); c.lineTo(w, hit); } else { c.moveTo(hit, top - 4); c.lineTo(hit, h); } c.stroke(); c.lineWidth = 1;
+    if (run && run.last && heard - run.last.at < 0.6) { c.globalAlpha = 1 - (heard - run.last.at) / 0.6; c.fillStyle = run.last.c; c.font = 'bold 20px system-ui, sans-serif'; c.textAlign = 'center'; c.fillText(run.last.t, w / 2, V ? hit + 28 : h - 14); c.globalAlpha = 1; }
+    if (run && heard < r.start) { c.fillStyle = '#fff'; c.font = 'bold 44px system-ui, sans-serif'; c.textAlign = 'center'; c.fillText(String(Math.max(1, Math.ceil((r.start - heard) / r.beat))), w / 2, h / 2); }
+  }
+  function idle() { if (run) return; preview = build(0); draw(preview.start); }
+
+  /* ---------- page controls */
+  function setActive(list) { active = {}; list.forEach(function (v) { active[v] = true; }); drawTracks(); idle(); }
+  function drawTracks() {
+    var box = $('tracks'); box.innerHTML = '<span class="k">You play:</span>';
+    g.order.forEach(function (v, i) {
+      var tr = g.tracks.filter(function (t) { return t[0] === v; })[0], bt = document.createElement('button');
+      bt.textContent = (i + 1) + ' · ' + (i ? '+ ' : '') + tr[1]; bt.className = 'chip'; bt.onclick = function () { setActive(g.order.slice(0, i + 1)); }; box.appendChild(bt);
+    });
+    g.tracks.forEach(function (tr) {
+      var bt = document.createElement('button'); bt.textContent = tr[1]; bt.className = 'chip' + (active[tr[0]] ? ' on' : ''); bt.style.borderColor = tr[2];
+      bt.onclick = function () { if (run) return; active[tr[0]] = !active[tr[0]]; drawTracks(); idle(); }; box.appendChild(bt);
+    });
+    var pads = $('pads'); pads.innerHTML = '';
+    g.tracks.forEach(function (tr) {
+      var key = bindings.filter(function (b) { return b.kind === 'key' && b.voice === tr[0] && !b.ghost; })[0];
+      var bt = document.createElement('button'); bt.className = 'pad'; bt.style.borderColor = tr[2];
+      bt.innerHTML = tr[1] + '<small>' + (key ? key.codeLabel || key.code : '') + '</small>';
+      bt.addEventListener('pointerdown', function (e) { e.preventDefault(); ensureAudio().then(function () { onHit({ source: 'pad', voice: tr[0], timeStamp: e.timeStamp }); }); });
+      pads.appendChild(bt);
+    });
+  }
+  function pickGroove(i) { g = GROOVES[i]; setActive(g.order.slice(0, Math.min(2, g.order.length))); }
+  GROOVES.forEach(function (x, i) { var o = document.createElement('option'); o.value = i; o.textContent = x.name; $('groove').appendChild(o); });
+  $('groove').onchange = function () { pickGroove(+$('groove').value); };
+  $('speed').onchange = function () { speed = +$('speed').value; idle(); };
+  $('view').onchange = function () { view = $('view').value; $('cv').style.height = view === 'highway' ? '440px' : (60 + 70 * g.tracks.length) + 'px'; idle(); };
+  $('cin').onchange = idle;
+  $('play').onclick = function () { start('play'); };
+  $('listen').onclick = function () { start('listen'); };
+  $('stop').onclick = stop;
+  window.addEventListener('resize', idle);
+  pickGroove(0); $('view').onchange(); btns();
+})();
+</script></body></html>
