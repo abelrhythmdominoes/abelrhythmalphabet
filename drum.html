@@ -1,23 +1,40 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>ABEL Drum (beta)</title><meta name="theme-color" content="#000000"><meta name="robots" content="noindex">
+<html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ABEL Drum (beta)</title><meta name="theme-color" content="#111827"><meta name="robots" content="noindex">
 <link rel="manifest" href="manifest.webmanifest"><link rel="icon" type="image/png" sizes="32x32" href="icons/play-favicon-32.png"><link rel="apple-touch-icon" href="icons/play-apple-touch-icon.png">
-<style>*{box-sizing:border-box}body{margin:0;background:#0b0b0e;color:#e8e8ee;font:15px/1.4 system-ui,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
-main{max-width:980px;margin:0 auto;padding:12px}header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}a{color:#e8b84a}h1{margin:6px 0;font-size:22px}small{opacity:.6}
-.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0}label{display:flex;gap:6px;align-items:center}.k{opacity:.7}
-select,button{font:inherit;color:inherit;background:#17171d;border:1px solid #33333d;border-radius:10px;padding:8px 12px}button{cursor:pointer;touch-action:manipulation}button:disabled{opacity:.4}
-#play{background:#e8b84a;color:#111;border-color:#e8b84a;font-weight:700}.chip{border-radius:999px;padding:6px 12px}.chip.on{background:#2a2a35;font-weight:700}
-canvas{width:100%;display:block;background:#0e0e13;border:1px solid #23232c;border-radius:14px}
-#pads{display:flex;gap:10px;margin:12px 0}.pad{flex:1;min-height:84px;border-width:2px;border-radius:14px;font-weight:700;font-size:16px;display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;user-select:none}.pad:active{background:#2a2a35}
-#hud,#result{min-height:1.4em}</style></head><body><main>
-<header><h1>ABEL Drum <small>beta</small></h1><a href="play.html">← ABEL Play</a></header>
-<div class="row"><label>Groove <select id="groove"></select></label><label>Speed <select id="speed" onchange=""><option value="100">100 %</option><option value="80">80 %</option><option value="60">60 %</option><option value="40">40 %</option></select></label>
+<script>(function(){var l=false;try{l=localStorage.getItem('abel:theme')==='light'}catch(e){}document.documentElement.setAttribute('data-theme',l?'light':'dark')})();</script>
+<style>*{box-sizing:border-box}
+:root{--bg:#111827;--card:#1f2937;--card2:#374151;--line:#4b5563;--text:#f9fafb;--muted:#9ca3af;--deep:#0f172a;--link:#93c5fd;--accent:#6366f1}
+html[data-theme="light"]{color-scheme:light;--bg:#f3f4f6;--card:#ffffff;--card2:#e5e7eb;--line:#d1d5db;--text:#111827;--muted:#4b5563;--deep:#f9fafb;--link:#1d4ed8;--accent:#4f46e5}
+html[data-theme="dark"]{color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 system-ui,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+main{max-width:980px;margin:0 auto;padding:12px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px}a{color:var(--link)}
+h1{margin:6px 0;font-size:26px}h1 small{font-size:13px;color:var(--muted);font-weight:400}
+h1 .tg{color:#4ade80}h1 .ty{color:#facc15}h1 .tr{color:#f87171}h1 .tw{color:#ffffff}
+html[data-theme="light"] h1 .tr{color:#dc2626}html[data-theme="light"] h1 .tg{color:#16a34a}html[data-theme="light"] h1 .ty{color:#ca8a04}html[data-theme="light"] h1 .tw{color:#111827}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0}label{display:flex;gap:6px;align-items:center}.k{color:var(--muted)}small,.muted{color:var(--muted)}
+select,button,input[type=number]{font:inherit;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px}button{cursor:pointer;touch-action:manipulation}button:disabled{opacity:.4;cursor:default}
+input[type=number]{width:5.5em}#btn-theme{width:44px;height:44px;padding:0;font-size:1.25rem;border-radius:12px}
+#play{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}.chip{border-radius:999px;padding:6px 12px}.chip.on{background:var(--card2);font-weight:700}
+canvas{width:100%;display:block;background:var(--deep);border:1px solid var(--line);border-radius:14px}
+#pads{display:flex;gap:10px;margin:12px 0}.pad{flex:1;min-height:84px;border-width:2px;border-radius:14px;font-weight:700;font-size:16px;display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;user-select:none}.pad:active{background:var(--card2)}
+details{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 12px;margin:12px 0}summary{cursor:pointer;font-weight:700}
+.erow{display:flex;align-items:center;gap:3px;margin:6px 0;overflow-x:auto}.ename{flex:0 0 84px;padding-left:8px}
+.cell{flex:0 0 26px;height:34px;padding:0;border-radius:6px;background:var(--deep);border:1px solid var(--line)}.cell.beat{margin-left:8px}.cell.on{background:var(--c);border-color:var(--c)}
+.rm{padding:4px 8px;margin-left:8px;border-radius:8px}#hud,#result{min-height:1.4em}</style></head><body><main>
+<div class="top"><h1 aria-label="ABEL Drum"><span class="tg">A</span><span class="ty">B</span><span class="tw">E</span><span class="tw">L</span> <span class="tr">D</span><span class="tw">r</span><span class="ty">u</span><span class="tg">m</span> <small>beta</small></h1><button id="btn-theme" type="button"></button></div>
+<p class="muted" style="margin:0"><a href="play.html">← ABEL Play</a> · <a href="index.html">ABEL</a></p>
+<div class="row"><label>Groove <select id="groove"></select></label><label>Speed <select id="speed"><option value="100">100 %</option><option value="80">80 %</option><option value="60">60 %</option><option value="40">40 %</option></select><span id="bpmtxt" class="muted"></span></label>
 <label>View <select id="view"><option value="lanes">Lanes</option><option value="highway">Highway</option></select></label>
 <label>Sound <select id="mix"><option value="drums">Backing + click</option><option value="click">Click only</option></select></label>
 <label><input type="checkbox" id="cin" checked> Count-in</label></div>
 <div class="row" id="tracks"></div>
 <div class="row"><button id="play">Play</button><button id="listen">Listen</button><button id="stop" disabled>Stop</button><span id="hud"></span></div>
 <canvas id="cv"></canvas><div id="pads"></div><div id="result" aria-live="polite"></div>
+<details id="comp"><summary>Compose your own groove</summary>
+<p class="muted">Tap the cells: 16 steps = one bar of sixteenth-notes (4 beats), repeated 4 times. Changing a preset copies it to “My groove”, saved on this device.</p>
+<div id="editor"></div>
+<div class="row"><label>Add <select id="addv"></select></label><button id="addbtn">Add instrument</button><label>Tempo <input id="bpm" type="number" min="40" max="200"> BPM</label><button id="reset">Back to the preset</button></div></details>
 <p><small>Tracks you don’t play sound as the backing. Your keys, pads and MIDI drums are the ones set up in ABEL Play (D snare, F kick, J hi-hat, H tom).</small></p>
 </main><script>/* ABEL generated sounds (inlined) */
 /* ABEL generated sounds (shared by the ABEL app and ABEL Play).
@@ -666,18 +683,36 @@ canvas{width:100%;display:block;background:#0e0e13;border:1px solid #23232c;bord
 })(typeof window !== 'undefined' ? window : globalThis);</script><script>(function () {
   'use strict';
   var S = AbelSounds, A = AbelInput, $ = function (i) { return document.getElementById(i); };
-  var HAT = '#e8b84a', SN = '#4f8df7', KI = '#ec407a', TM = '#34c79a';
+  var HAT = '#38bdf8', SN = '#a78bfa', KI = '#ec4899', TM = '#e879f9'; // no green, yellow, red or white here: those belong to the ABEL colour code
   var GROOVES = [
     { name: 'Rock beat (8th-note hi-hat)', bpm: 100, order: ['hihat', 'kick', 'snare'], tracks: [['hihat', 'Hi-hat', HAT, 'x.x.x.x.x.x.x.x.'], ['snare', 'Snare', SN, '....x.......x...'], ['kick', 'Kick', KI, 'x.......x.x.....']] },
     { name: 'Four on the floor', bpm: 120, order: ['hihat', 'kick', 'snare'], tracks: [['hihat', 'Hi-hat', HAT, '..x...x...x...x.'], ['snare', 'Snare', SN, '....x.......x...'], ['kick', 'Kick', KI, 'x...x...x...x...']] },
     { name: 'Disco (hi-hat on the “&”)', bpm: 115, order: ['hihat', 'kick', 'snare'], tracks: [['hihat', 'Hi-hat', HAT, '..x...x...x...x.'], ['snare', 'Snare', SN, '....x.......x...'], ['kick', 'Kick', KI, 'x...x...x...x...']] },
     { name: '16th-note funk', bpm: 90, order: ['hihat', 'kick', 'snare', 'tom'], tracks: [['hihat', 'Hi-hat', HAT, 'xxxxxxxxxxxxxxxx'], ['snare', 'Snare', SN, '....x.......x..x'], ['tom', 'Tom', TM, '..............x.'], ['kick', 'Kick', KI, 'x.....x...x.....']] }
   ];
-  var RC = ['', '#4ade80', '#60a5fa', '#fbbf24'], W1 = 0.05, W2 = 0.09, W3 = 0.14;
+  var RC = ['', '#22d3ee', '#60a5fa', '#c084fc'], W1 = 0.05, W2 = 0.09, W3 = 0.14;
   var ctx = null, samples = null, run = null, preview = null, raf = 0, timer = 0, midi = null;
   var settings = A.loadSettings(), g = GROOVES[0], speed = 100, view = 'lanes', active = {};
   var bindings = A.mergeBindings(A.mergeBindings(settings.bindings && settings.bindings.length ? settings.bindings : A.keyboardStarter(),
     [A.makeBinding({ kind: 'key', code: 'KeyH', codeLabel: 'H', voice: 'tom' })]), A.gmDrumPreset());
+
+  /* ---------- theme (same saved choice as the other pages) and my own groove */
+  function isLight() { return document.documentElement.getAttribute('data-theme') === 'light'; }
+  var T = null;
+  function tokens() {
+    return isLight() ? { text: '#111827', muted: '#4b5563', lane1: 'rgba(0,0,0,.05)', lane2: 'rgba(0,0,0,.02)', grid: 'rgba(0,0,0,.14)', gridStrong: 'rgba(0,0,0,.4)', dot: 'rgba(0,0,0,.28)', head: '#334155' }
+      : { text: '#f9fafb', muted: '#9ca3af', lane1: 'rgba(255,255,255,.04)', lane2: 'rgba(255,255,255,.015)', grid: 'rgba(255,255,255,.12)', gridStrong: 'rgba(255,255,255,.35)', dot: 'rgba(255,255,255,.25)', head: '#cbd5e1' };
+  }
+  var VOICES = { hihat: ['Hi-hat', '#38bdf8'], snare: ['Snare', '#a78bfa'], kick: ['Kick', '#ec4899'], tom: ['Tom', '#e879f9'], clap: ['Clap', '#818cf8'], rim: ['Rim shot', '#71717a'], cowbell: ['Cowbell', '#fb923c'] };
+  var KIT = ['cowbell', 'hihat', 'clap', 'rim', 'snare', 'tom', 'kick'], BUILD = ['hihat', 'kick', 'snare', 'tom', 'clap', 'rim', 'cowbell'];
+  var CUSTOM_KEY = 'abel:drum:custom', custom = null, lastPreset = 0;
+  try { custom = JSON.parse(localStorage.getItem(CUSTOM_KEY) || 'null'); if (!custom || !custom.pats) custom = null; } catch (e) { custom = null; }
+  function customGroove() {
+    var gr = { name: 'My groove', bpm: custom.bpm, custom: true, order: BUILD.filter(function (v) { return custom.pats[v]; }),
+      tracks: KIT.filter(function (v) { return custom.pats[v]; }).map(function (v) { return [v, VOICES[v][0], VOICES[v][1], custom.pats[v]]; }) };
+    return gr;
+  }
+  function saveCustom() { try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(custom)); } catch (e) { /* not saved */ } }
 
   /* ---------- audio */
   function ensureAudio() {
@@ -739,7 +774,7 @@ canvas{width:100%;display:block;background:#0e0e13;border:1px solid #23232c;bord
       var n = a[i]; if (n.t - adj > W3) break; if (n.state) continue;
       var d = Math.abs(n.t - adj); if (d <= W3 && d < bd) { best = n; bd = d; }
     }
-    if (!best) { r.combo = 0; r.last = { t: 'Extra', c: '#f87171', at: r.heard }; return; }
+    if (!best) { r.combo = 0; r.last = { t: 'Extra', c: '#94a3b8', at: r.heard }; return; }
     var k = bd <= W1 ? 1 : bd <= W2 ? 2 : 3; best.state = k;
     r.score += [0, 100, 70, 40][k]; r.combo++; r.max = Math.max(r.max, r.combo); r.hit++; r.sum += (adj - best.t) * 1000;
     r.last = { t: ['', 'Perfect', 'Great', 'Good'][k], c: RC[k], at: r.heard };
@@ -781,7 +816,7 @@ canvas{width:100%;display:block;background:#0e0e13;border:1px solid #23232c;bord
     for (var v in r.byV) {
       if (!active[v] || r.mode !== 'play') continue;
       var a = r.byV[v], f = r.first[v] || 0;
-      while (f < a.length && (a[f].state || a[f].t + W3 < heard)) { if (!a[f].state) { a[f].state = -1; r.combo = 0; r.last = { t: 'Miss', c: '#f87171', at: heard }; } f++; }
+      while (f < a.length && (a[f].state || a[f].t + W3 < heard)) { if (!a[f].state) { a[f].state = -1; r.combo = 0; r.last = { t: 'Miss', c: '#94a3b8', at: heard }; } f++; }
       r.first[v] = f;
     }
     draw(heard);
@@ -796,7 +831,7 @@ canvas{width:100%;display:block;background:#0e0e13;border:1px solid #23232c;bord
     var cv = $('cv'), dpr = Math.min(window.devicePixelRatio || 1, 2), w = cv.clientWidth, h = cv.clientHeight;
     if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
     var c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
-    var r = run || preview, n = g.tracks.length, V = view === 'highway', L = V ? 4 : 92, top = V ? 40 : 34;
+    T = tokens(); var r = run || preview, n = g.tracks.length, V = view === 'highway', L = V ? 4 : 92, top = V ? 40 : 34;
     var lane = V ? (w - 8) / n : (h - top - 4) / n, hit = V ? h * 0.82 : L + (w - L) * 0.2;
     var pps = V ? (hit - top) / (r.beat * 4.5) : (w - L) / (r.beat * 6.5);
     var along = function (t) { return V ? hit - (t - heard) * pps : hit + (t - heard) * pps; };
@@ -804,25 +839,25 @@ canvas{width:100%;display:block;background:#0e0e13;border:1px solid #23232c;bord
     var vis = function (d) { return V ? d > top - 10 && d < h + 10 : d > L - 10 && d < w + 10; };
     c.font = 'bold 12px system-ui, sans-serif'; c.textBaseline = 'middle';
     g.tracks.forEach(function (tr, i) {
-      c.fillStyle = i % 2 ? 'rgba(255,255,255,.03)' : 'rgba(255,255,255,.015)';
+      c.fillStyle = i % 2 ? T.lane1 : T.lane2;
       if (V) c.fillRect(L + lane * i, top, lane, h - top); else c.fillRect(0, top + lane * i, w, lane);
       c.globalAlpha = active[tr[0]] ? 1 : 0.35; c.fillStyle = tr[2]; c.textAlign = V ? 'center' : 'left';
-      if (V) { c.fillRect(L + lane * i + 8, top - 8, lane - 16, 3); c.fillStyle = '#e8e8ee'; c.fillText(tr[1], L + lane * (i + 0.5), top - 20); }
-      else { c.fillRect(8, top + lane * i + lane * 0.25, 3, lane * 0.5); c.fillStyle = '#e8e8ee'; c.fillText(tr[1], 18, top + lane * (i + 0.5)); }
+      if (V) { c.fillRect(L + lane * i + 8, top - 8, lane - 16, 3); c.fillStyle = T.text; c.fillText(tr[1], L + lane * (i + 0.5), top - 20); }
+      else { c.fillRect(8, top + lane * i + lane * 0.25, 3, lane * 0.5); c.fillStyle = T.text; c.fillText(tr[1], 18, top + lane * (i + 0.5)); }
       c.globalAlpha = 1;
     });
     var b0 = Math.floor((heard - r.t0) / r.beat) - 1;
     for (var b = b0; b < b0 + 12; b++) {
       var tb = r.t0 + b * r.beat, d = along(tb); if (!vis(d) || b < 0 || b >= r.nb) continue;
       var bn = ((b - r.cin) % 4 + 4) % 4 + 1, bar = b >= r.cin && bn === 1;
-      c.strokeStyle = bar ? 'rgba(255,255,255,.35)' : 'rgba(255,255,255,.12)'; c.beginPath();
+      c.strokeStyle = bar ? T.gridStrong : T.grid; c.beginPath();
       if (V) { c.moveTo(L, d); c.lineTo(w, d); } else { c.moveTo(d, top); c.lineTo(d, h); } c.stroke();
-      c.fillStyle = bar ? '#fff' : '#8a8a96'; c.font = (bar ? 'bold 16px' : '12px') + ' system-ui, sans-serif'; c.textAlign = 'center';
+      c.fillStyle = bar ? T.text : T.muted; c.font = (bar ? 'bold 16px' : '12px') + ' system-ui, sans-serif'; c.textAlign = 'center';
       var lab = b < r.cin ? String(bn) : bar ? 'bar ' + ((b - r.cin) / 4 + 1) : String(bn);
       if (V) c.fillText(lab, 18, d - 8); else c.fillText(lab, d, 14);
     }
     var s0 = Math.max(0, Math.floor((heard - r.start) / r.step) - 8);
-    c.fillStyle = 'rgba(255,255,255,.22)';
+    c.fillStyle = T.dot;
     for (var s = s0; s < r.N; s++) {
       var ts = r.start + s * r.step, ds = along(ts); if (V ? ds < top : ds > w + 10) break; if (!vis(ds)) continue;
       for (var i2 = 0; i2 < n; i2++) { var q = P(ts, i2); c.fillRect(q[0] - 1.5, q[1] - 1.5, 3, 3); }
@@ -835,16 +870,20 @@ canvas{width:100%;display:block;background:#0e0e13;border:1px solid #23232c;bord
       var dd = along(nt.t); if (!vis(dd)) continue;
       var ti = g.tracks.findIndex(function (x) { return x[0] === nt.v; }), p = P(nt.t, ti);
       c.globalAlpha = nt.state === -1 ? 0.25 : nt.t < heard - 0.05 && !nt.state ? 0.35 : 1;
-      c.fillStyle = nt.state === -1 ? '#7f1d1d' : g.tracks[ti][2]; c.beginPath(); c.arc(p[0], p[1], rr, 0, 6.2832); c.fill();
+      c.fillStyle = nt.state === -1 ? '#475569' : g.tracks[ti][2]; c.beginPath(); c.arc(p[0], p[1], rr, 0, 6.2832); c.fill();
       if (nt.state > 0) { c.strokeStyle = RC[nt.state]; c.lineWidth = 3; c.stroke(); c.lineWidth = 1; }
       c.globalAlpha = 1;
     }
-    c.strokeStyle = '#fff'; c.lineWidth = 2; c.beginPath();
+    c.strokeStyle = T.head; c.lineWidth = 2; c.beginPath();
     if (V) { c.moveTo(L, hit); c.lineTo(w, hit); } else { c.moveTo(hit, top - 4); c.lineTo(hit, h); } c.stroke(); c.lineWidth = 1;
     if (run && run.last && heard - run.last.at < 0.6) { c.globalAlpha = 1 - (heard - run.last.at) / 0.6; c.fillStyle = run.last.c; c.font = 'bold 20px system-ui, sans-serif'; c.textAlign = 'center'; c.fillText(run.last.t, w / 2, V ? hit + 28 : h - 14); c.globalAlpha = 1; }
-    if (run && heard < r.start) { c.fillStyle = '#fff'; c.font = 'bold 44px system-ui, sans-serif'; c.textAlign = 'center'; c.fillText(String(Math.max(1, Math.ceil((r.start - heard) / r.beat))), w / 2, h / 2); }
+    if (run && heard < r.start) { c.fillStyle = T.text; c.font = 'bold 44px system-ui, sans-serif'; c.textAlign = 'center'; c.fillText(String(Math.max(1, Math.ceil((r.start - heard) / r.beat))), w / 2, h / 2); }
   }
-  function idle() { if (run) return; preview = build(0); draw(preview.start); }
+  function idle() {
+    if (run) return;
+    $('bpmtxt').textContent = '(' + Math.round(g.bpm * speed / 100) + ' BPM)';
+    preview = build(0); draw(preview.start);
+  }
 
   /* ---------- page controls */
   function setActive(list) { active = {}; list.forEach(function (v) { active[v] = true; }); drawTracks(); idle(); }
@@ -867,9 +906,59 @@ canvas{width:100%;display:block;background:#0e0e13;border:1px solid #23232c;bord
       pads.appendChild(bt);
     });
   }
-  function pickGroove(i) { g = GROOVES[i]; setActive(g.order.slice(0, Math.min(2, g.order.length))); }
+  function pickGroove(i) {
+    if (i === 'custom') {
+      if (!custom) { custom = { bpm: g.bpm, pats: {} }; g.tracks.forEach(function (t) { custom.pats[t[0]] = t[3]; }); saveCustom(); }
+      g = customGroove();
+    } else { g = GROOVES[+i]; lastPreset = +i; }
+    $('groove').value = String(i);
+    setActive(g.order.slice(0, Math.min(2, g.order.length)));
+    drawEditor();
+  }
+  // composing: tap the cells (16 sixteenth-notes = one bar, repeated 4 times). Editing a preset copies it to "My groove".
+  function edit(fn) {
+    if (run) return;
+    if (!g.custom) { custom = { bpm: g.bpm, pats: {} }; g.tracks.forEach(function (t) { custom.pats[t[0]] = t[3]; }); }
+    fn(custom); saveCustom(); g = customGroove();
+    var keep = Object.keys(active).filter(function (v) { return active[v] && custom.pats[v]; });
+    $('groove').value = 'custom'; setActive(keep.length ? keep : g.order.slice(0, Math.min(2, g.order.length))); drawEditor();
+  }
+  function drawEditor() {
+    var box = $('editor'); box.innerHTML = '';
+    g.tracks.forEach(function (tr) {
+      var row = document.createElement('div'); row.className = 'erow';
+      var nm = document.createElement('span'); nm.className = 'ename'; nm.textContent = tr[1]; nm.style.borderLeft = '4px solid ' + tr[2]; row.appendChild(nm);
+      for (var i = 0; i < 16; i++) (function (i) {
+        var b = document.createElement('button'); b.className = 'cell' + (tr[3].charAt(i) === 'x' ? ' on' : '') + (i % 4 === 0 ? ' beat' : '');
+        b.style.setProperty('--c', tr[2]); b.setAttribute('aria-label', tr[1] + ' step ' + (i + 1)); b.setAttribute('aria-pressed', tr[3].charAt(i) === 'x');
+        b.onclick = function () { edit(function (c) { var p = c.pats[tr[0]]; c.pats[tr[0]] = p.slice(0, i) + (p.charAt(i) === 'x' ? '.' : 'x') + p.slice(i + 1); }); };
+        row.appendChild(b);
+      })(i);
+      var rm = document.createElement('button'); rm.className = 'rm'; rm.textContent = '✕'; rm.title = 'Remove ' + tr[1]; rm.disabled = g.tracks.length < 2;
+      rm.onclick = function () { edit(function (c) { delete c.pats[tr[0]]; }); }; row.appendChild(rm);
+      box.appendChild(row);
+    });
+    var sel = $('addv'); sel.innerHTML = '';
+    KIT.filter(function (v) { return !g.tracks.some(function (t) { return t[0] === v; }); }).forEach(function (v) { var o = document.createElement('option'); o.value = v; o.textContent = VOICES[v][0]; sel.appendChild(o); });
+    $('addbtn').disabled = !sel.options.length; $('bpm').value = Math.round(g.bpm);
+  }
+  $('addbtn').onclick = function () { var v = $('addv').value; if (v) edit(function (c) { c.pats[v] = '................'; }); };
+  $('bpm').onchange = function () { var v = Math.max(40, Math.min(200, Math.round(+$('bpm').value) || 100)); edit(function (c) { c.bpm = v; }); };
+  $('reset').onclick = function () { if (!run) pickGroove(lastPreset); };
   GROOVES.forEach(function (x, i) { var o = document.createElement('option'); o.value = i; o.textContent = x.name; $('groove').appendChild(o); });
-  $('groove').onchange = function () { pickGroove(+$('groove').value); };
+  var oc = document.createElement('option'); oc.value = 'custom'; oc.textContent = 'My groove (compose)'; $('groove').appendChild(oc);
+  $('groove').onchange = function () { pickGroove($('groove').value === 'custom' ? 'custom' : +$('groove').value); };
+  function showTheme() {
+    var l = isLight(), b = $('btn-theme');
+    b.textContent = l ? '🌙' : '☀️'; b.setAttribute('aria-label', l ? 'Switch to dark theme' : 'Switch to light theme'); b.title = b.getAttribute('aria-label');
+    var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', l ? '#f3f4f6' : '#111827');
+  }
+  $('btn-theme').onclick = function () {
+    var next = !isLight(); document.documentElement.setAttribute('data-theme', next ? 'light' : 'dark');
+    try { localStorage.setItem('abel:theme', next ? 'light' : 'dark'); } catch (e) { /* not saved */ }
+    showTheme(); idle();
+  };
+  showTheme();
   $('speed').onchange = function () { speed = +$('speed').value; idle(); };
   $('view').onchange = function () { view = $('view').value; $('cv').style.height = view === 'highway' ? '440px' : (60 + 70 * g.tracks.length) + 'px'; idle(); };
   $('cin').onchange = idle;
